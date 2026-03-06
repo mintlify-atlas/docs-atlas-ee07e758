@@ -1,0 +1,138 @@
+{
+  "projectType": "api-service",
+  "projectName": "JC Java Training - Library Management API",
+  "projectDescription": "A Spring Boot REST API for library management with JWT authentication, OpenLibrary integration, and comprehensive book and user management capabilities.",
+  "theme": "linden",
+  "primaryColor": "#2563eb",
+  "lightColor": "#3b82f6",
+  "darkColor": "#1e40af",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "architecture/overview",
+              "architecture/layered-design",
+              "architecture/security"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "authentication/overview",
+              "authentication/jwt-tokens",
+              "authentication/registration",
+              "authentication/login"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/database",
+              "configuration/security",
+              "configuration/application-properties"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/setup",
+              "development/testing",
+              "development/project-structure"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/introduction",
+              "api/swagger"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth/register",
+              "api/auth/login"
+            ]
+          },
+          {
+            "group": "Books",
+            "pages": [
+              "api/books/list",
+              "api/books/get-by-id",
+              "api/books/search-isbn",
+              "api/books/create",
+              "api/books/update",
+              "api/books/delete"
+            ]
+          },
+          {
+            "group": "Users",
+            "pages": [
+              "api/users/list",
+              "api/users/get-by-id",
+              "api/users/get-logged",
+              "api/users/update",
+              "api/users/delete",
+              "api/users/add-book",
+              "api/users/remove-book"
+            ]
+          },
+          {
+            "group": "Models",
+            "pages": [
+              "api/models/book",
+              "api/models/user",
+              "api/models/auth-user",
+              "api/models/pagination"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "JWT-based authentication and authorization with Spring Security",
+    "Complete CRUD operations for books and users with pagination support",
+    "OpenLibrary API integration for external book search by ISBN",
+    "Layered architecture with clear separation of concerns",
+    "Comprehensive exception handling with global error responses",
+    "Interactive Swagger/OpenAPI documentation",
+    "PostgreSQL database integration with JPA/Hibernate",
+    "MapStruct for efficient DTO mapping",
+    "Extensive unit and integration test coverage"
+  ],
+  "publicApiSurface": [
+    "POST /api/v1/auth/register - User registration",
+    "POST /api/v1/auth/login - User authentication",
+    "GET /api/v1/books/findAll - List all books with pagination and filters",
+    "GET /api/v1/books/findById/{id} - Get book by ID",
+    "GET /api/v1/books/isbn/{isbn} - Search book by ISBN",
+    "POST /api/v1/books/create - Create new book",
+    "PUT /api/v1/books/update/{id} - Update book",
+    "DELETE /api/v1/books/delete/{id} - Delete book",
+    "GET /api/v1/users/findAll - List all users with pagination",
+    "GET /api/v1/users/findById/{id} - Get user by ID",
+    "GET /api/v1/users/logged - Get currently logged-in user",
+    "PUT /api/v1/users/update/{id} - Update user",
+    "DELETE /api/v1/users/delete/{id} - Delete user",
+    "POST /api/v1/users/{userId}/books/{bookId} - Add book to user collection",
+    "DELETE /api/v1/users/{userId}/books/{bookId} - Remove book from user collection"
+  ]
+}
