@@ -1,0 +1,156 @@
+---
+title: "List All Users"
+api: "GET /api/v1/users/findAll"
+description: "Retrieves a paginated list of all users in the system"
+---
+
+This endpoint returns a paginated collection of users with customizable page size and sorting by user ID in ascending order.
+
+## Authentication
+
+This endpoint requires JWT authentication. Include a valid JWT token in the Authorization header.
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="0">
+  The page number to retrieve (zero-based index)
+</ParamField>
+
+<ParamField query="size" type="integer" default="10">
+  The number of users per page
+</ParamField>
+
+## Response
+
+<ResponseField name="page" type="array">
+  Array of user objects on the current page
+  
+  <ResponseField name="id" type="string">
+    Unique identifier of the user (UUID format)
+  </ResponseField>
+  
+  <ResponseField name="userName" type="string">
+    Username for the user's account
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Full name of the user
+  </ResponseField>
+  
+  <ResponseField name="birthDate" type="string">
+    Date of birth in ISO 8601 format (YYYY-MM-DD)
+  </ResponseField>
+  
+  <ResponseField name="bookIds" type="array">
+    Array of book UUIDs associated with this user
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="count" type="integer">
+  Number of users on the current page
+</ResponseField>
+
+<ResponseField name="limit" type="integer">
+  Maximum number of users per page
+</ResponseField>
+
+<ResponseField name="offset" type="integer">
+  Starting position of the first user on current page
+</ResponseField>
+
+<ResponseField name="total_pages" type="integer">
+  Total number of pages available
+</ResponseField>
+
+<ResponseField name="total_count" type="integer">
+  Total number of users across all pages
+</ResponseField>
+
+<ResponseField name="previous_page" type="integer" nullable>
+  Previous page number, or null if on first page
+</ResponseField>
+
+<ResponseField name="current_page" type="integer">
+  Current page number
+</ResponseField>
+
+<ResponseField name="next_page" type="integer" nullable>
+  Next page number, or null if on last page
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X GET "https://api.library.com/api/v1/users/findAll?page=0&size=10" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+## Example Response
+
+<ResponseExample>
+```json 200 - Success
+{
+  "page": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "userName": "jsmith",
+      "name": "John Smith",
+      "birthDate": "1990-05-15",
+      "bookIds": [
+        "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "9f3e4a56-2c1d-4b8e-8f6d-5a3c2b1d4e5f"
+      ]
+    },
+    {
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "userName": "mdoe",
+      "name": "Mary Doe",
+      "birthDate": "1985-08-22",
+      "bookIds": [
+        "1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p"
+      ]
+    }
+  ],
+  "count": 2,
+  "limit": 10,
+  "offset": 0,
+  "total_pages": 5,
+  "total_count": 47,
+  "previous_page": null,
+  "current_page": 1,
+  "next_page": 2
+}
+```
+
+```json 401 - Unauthorized
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "JWT token is missing or invalid",
+  "path": "/api/v1/users/findAll"
+}
+```
+
+```json 500 - Internal Server Error
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "An unexpected error occurred",
+  "path": "/api/v1/users/findAll"
+}
+```
+</ResponseExample>
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200  | Successfully retrieved paginated list of users |
+| 401  | Unauthorized - Invalid or missing JWT token |
+| 500  | Internal server error |

@@ -1,0 +1,118 @@
+---
+title: "Delete Book"
+api: "DELETE /api/v1/books/delete/{id}"
+description: "Deletes a book from the library system by its unique identifier."
+---
+
+## Authentication
+
+This endpoint requires a valid JWT token in the Authorization header.
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Path Parameters
+
+<ParamField path="id" type="string" format="uuid" required>
+  The unique identifier (UUID) of the book to delete.
+</ParamField>
+
+## Response
+
+This endpoint returns no content on successful deletion.
+
+<RequestExample>
+```bash cURL
+curl -X DELETE "https://api.example.com/api/v1/books/delete/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.example.com/api/v1/books/delete/550e8400-e29b-41d4-a716-446655440000',
+  {
+    method: 'DELETE',
+    headers: {
+      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+    }
+  }
+);
+
+if (response.ok) {
+  console.log('Book deleted successfully');
+}
+```
+
+```python Python
+import requests
+
+url = 'https://api.example.com/api/v1/books/delete/550e8400-e29b-41d4-a716-446655440000'
+headers = {
+    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+}
+
+response = requests.delete(url, headers=headers)
+
+if response.status_code == 204:
+    print('Book deleted successfully')
+```
+</RequestExample>
+
+<ResponseExample>
+```json 204 No Content
+// No response body
+```
+
+```json 404 Not Found
+{
+  "timestamp": "2026-03-06T10:30:00.000+00:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Book not found with id: 550e8400-e29b-41d4-a716-446655440000",
+  "path": "/api/v1/books/delete/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+```json 409 Conflict - Book in Use
+{
+  "timestamp": "2026-03-06T10:30:00.000+00:00",
+  "status": 409,
+  "error": "Conflict",
+  "message": "Cannot delete book: currently borrowed by users",
+  "path": "/api/v1/books/delete/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="204" type="No Content">
+  Book deleted successfully. No response body is returned.
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid JWT token.
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  Valid token but insufficient permissions to delete books.
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Book with the specified ID does not exist.
+</ResponseField>
+
+<ResponseField name="409" type="Conflict">
+  Book cannot be deleted because it is currently in use (e.g., borrowed by users).
+</ResponseField>
+
+## Important Notes
+
+<Warning>
+  Deleting a book is a permanent action and cannot be undone. Ensure that the book is not currently borrowed or referenced in any active transactions before deletion.
+</Warning>
+
+<Info>
+  If you need to temporarily remove a book from circulation without deleting it, consider implementing a "soft delete" or "archive" feature instead.
+</Info>

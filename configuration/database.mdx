@@ -1,0 +1,196 @@
+---
+title: "Database Configuration"
+description: "Configure PostgreSQL database connection and JPA/Hibernate settings for the Library Management API"
+---
+
+## Overview
+
+The Library Management API uses PostgreSQL as its database and Hibernate/JPA for object-relational mapping. This guide covers all database-related configuration properties and connection setup.
+
+## Database Connection
+
+### Connection Properties
+
+The following properties configure the PostgreSQL database connection:
+
+| Property | Type | Description | Example |
+|----------|------|-------------|-------|
+| `spring.datasource.url` | String | PostgreSQL JDBC connection URL | `jdbc:postgresql://localhost:5432/library_db` |
+| `spring.datasource.username` | String | Database username | `postgres` |
+| `spring.datasource.password` | String | Database password | `yourpassword` |
+| `spring.datasource.driver-class-name` | String | JDBC driver class | `org.postgresql.Driver` |
+
+<Warning>
+  Database credentials should **never** be hardcoded in `application.properties`. Use environment variables or external configuration management.
+</Warning>
+
+### Environment Variable Configuration
+
+The application is configured to read database credentials from environment variables:
+
+```properties
+spring.datasource.url=${db_url}
+spring.datasource.username=${db_username}
+spring.datasource.password=${db_password}
+```
+
+**Required Environment Variables:**
+
+- `db_url` - Full PostgreSQL JDBC connection string
+- `db_username` - Database user with appropriate permissions
+- `db_password` - Database user password
+
+### Example Database URL Formats
+
+<CodeGroup>
+```bash Local Development
+export db_url="jdbc:postgresql://localhost:5432/library_db"
+export db_username="postgres"
+export db_password="admin123"
+```
+
+```bash Docker Environment
+export db_url="jdbc:postgresql://postgres-container:5432/library_db"
+export db_username="library_user"
+export db_password="secure_password"
+```
+
+```bash Cloud Environment
+export db_url="jdbc:postgresql://db.example.com:5432/library_prod?sslmode=require"
+export db_username="prod_user"
+export db_password="${DB_PASSWORD_SECRET}"
+```
+</CodeGroup>
+
+## JPA/Hibernate Configuration
+
+### Hibernate Properties
+
+| Property | Value | Description |
+|----------|-------|-------------|
+| `spring.jpa.database-platform` | `org.hibernate.dialect.PostgreSQLDialect` | Specifies PostgreSQL-specific SQL dialect |
+| `spring.jpa.hibernate.ddl-auto` | `create-drop` | Database schema generation strategy |
+
+### DDL Auto Modes
+
+The `spring.jpa.hibernate.ddl-auto` property controls schema management:
+
+<AccordionGroup>
+  <Accordion title="create-drop (Default)">
+    - **Behavior**: Creates schema at application startup, drops it at shutdown
+    - **Use Case**: Development and testing
+    - **Warning**: **All data is lost** when the application stops
+    - **Configured in**: `application.properties:13`
+  </Accordion>
+
+  <Accordion title="update">
+    - **Behavior**: Updates schema to match entities without dropping data
+    - **Use Case**: Development when you want to preserve data
+    - **Caution**: May not handle all schema changes correctly
+    ```properties
+    spring.jpa.hibernate.ddl-auto=update
+    ```
+  </Accordion>
+
+  <Accordion title="validate">
+    - **Behavior**: Validates schema matches entities, no modifications
+    - **Use Case**: Production environments
+    - **Recommendation**: Use with migration tools like Flyway or Liquibase
+    ```properties
+    spring.jpa.hibernate.ddl-auto=validate
+    ```
+  </Accordion>
+
+  <Accordion title="none">
+    - **Behavior**: No schema management by Hibernate
+    - **Use Case**: Production with external schema management
+    ```properties
+    spring.jpa.hibernate.ddl-auto=none
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  The default `create-drop` setting is **only suitable for development**. For production environments, use `validate` or `none` with proper database migration tools.
+</Warning>
+
+## Production Configuration Recommendations
+
+For production deployments, consider these configuration changes:
+
+### Connection Pool Settings
+
+```properties
+# HikariCP connection pool configuration
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.connection-timeout=30000
+spring.datasource.hikari.idle-timeout=600000
+spring.datasource.hikari.max-lifetime=1800000
+```
+
+### JPA Production Settings
+
+```properties
+# Disable schema auto-generation
+spring.jpa.hibernate.ddl-auto=validate
+
+# Enable SQL logging in development only
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.format_sql=false
+
+# Performance optimizations
+spring.jpa.properties.hibernate.jdbc.batch_size=20
+spring.jpa.properties.hibernate.order_inserts=true
+spring.jpa.properties.hibernate.order_updates=true
+```
+
+### SSL/TLS Connection
+
+```properties
+spring.datasource.url=jdbc:postgresql://your-host:5432/library_db?sslmode=require&ssl=true
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Connection Refused Error">
+    **Error**: `Connection to localhost:5432 refused`
+    
+    **Solutions**:
+    - Verify PostgreSQL is running: `systemctl status postgresql`
+    - Check the port in your connection URL matches PostgreSQL configuration
+    - Ensure firewall allows connections on port 5432
+  </Accordion>
+
+  <Accordion title="Authentication Failed">
+    **Error**: `FATAL: password authentication failed for user`
+    
+    **Solutions**:
+    - Verify environment variables are set correctly
+    - Check PostgreSQL `pg_hba.conf` authentication settings
+    - Ensure the user exists: `psql -U postgres -c "\du"`
+  </Accordion>
+
+  <Accordion title="Database Does Not Exist">
+    **Error**: `FATAL: database "library_db" does not exist`
+    
+    **Solutions**:
+    - Create the database: `CREATE DATABASE library_db;`
+    - Verify the database name in your connection URL
+  </Accordion>
+
+  <Accordion title="Schema Creation Issues">
+    **Error**: Schema validation or creation failures
+    
+    **Solutions**:
+    - Check user has CREATE permissions
+    - Review Hibernate logs for specific errors
+    - Verify entity mappings are correct
+  </Accordion>
+</AccordionGroup>
+
+## Related Configuration
+
+- [Security Configuration](/configuration/security) - JWT and authentication setup
+- [Application Properties](/configuration/application-properties) - Complete properties reference

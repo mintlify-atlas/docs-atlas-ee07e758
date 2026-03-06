@@ -1,0 +1,231 @@
+---
+title: 'Architecture Overview'
+description: 'High-level overview of the Library Management API architecture and design principles'
+---
+
+## Introduction
+
+The Library Management API is built using **Spring Boot** and follows a modern, layered architecture that promotes separation of concerns, maintainability, and scalability. This REST API provides comprehensive functionality for managing books, users, and their collections, with integrated security using JWT authentication.
+
+## Architecture Principles
+
+The application adheres to several key architectural principles:
+
+<CardGroup cols={2}>
+  <Card title="Layered Architecture" icon="layer-group">
+    Clear separation between presentation, business logic, and data access layers
+  </Card>
+  <Card title="Dependency Injection" icon="plug">
+    Spring's IoC container manages component lifecycles and dependencies
+  </Card>
+  <Card title="Interface-Based Design" icon="handshake">
+    Service contracts defined through interfaces for loose coupling
+  </Card>
+  <Card title="RESTful Design" icon="share-nodes">
+    Standard HTTP methods and status codes for predictable API behavior
+  </Card>
+</CardGroup>
+
+## High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Client Applications                       │
+│                    (Web, Mobile, Third-party)                   │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ HTTP/HTTPS Requests
+                             │ (JSON Payloads)
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Security Layer                              │
+│  ┌──────────────┐      ┌──────────────┐     ┌──────────────┐   │
+│  │ SecurityConfig│ ──▶  │JwtTokenValidator│ ─▶│  JwtUtils    │   │
+│  └──────────────┘      └──────────────┘     └──────────────┘   │
+└────────────────────────────┬────────────────────────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Presentation Layer                            │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │BookController│  │UserController│  │AuthController│          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+│         │                  │                  │                  │
+│    ┌────▼──────┐     ┌────▼──────┐     ┌────▼──────┐          │
+│    │Book DTOs  │     │User DTOs  │     │Auth DTOs  │          │
+│    └───────────┘     └───────────┘     └───────────┘          │
+└────────────────────────────┬────────────────────────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Mapping Layer                               │
+│  ┌──────────────┐  ┌──────────────┐                            │
+│  │ IBookMapper  │  │ IUserMapper  │  (MapStruct)               │
+│  └──────┬───────┘  └──────┬───────┘                            │
+└─────────┼──────────────────┼──────────────────────────────────┘
+          ▼                  ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       Service Layer                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │IBookService  │  │IUserService  │  │UserDetailSvc │          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+│         │                  │                  │                  │
+│  ┌──────▼───────┐  ┌──────▼───────┐  ┌──────▼───────┐          │
+│  │BookServiceImpl│ │UserServiceImpl│ │UserDetailImpl│          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+└─────────┼──────────────────┼──────────────────┼──────────────────┘
+          ▼                  ▼                  ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Persistence Layer                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │IBookRepository│ │IUserRepository│ │IAuthUserRepo │          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+│         │                  │                  │                  │
+│  ┌──────▼───────┐  ┌──────▼───────┐  ┌──────▼───────┐          │
+│  │  Book Entity │  │  User Entity │  │AuthUser Entity│         │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+└─────────┼──────────────────┼──────────────────┼──────────────────┘
+          │                  │                  │
+          └──────────────────┴──────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Database Layer                               │
+│                    (PostgreSQL/MySQL)                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Core Components
+
+### Application Entry Point
+
+The application starts from `TrainingApplication.java`:
+
+```java
+@SpringBootApplication
+public class TrainingApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(TrainingApplication.class, args);
+    }
+}
+```
+
+**Location**: `src/main/java/com/raven/training/TrainingApplication.java:7-11`
+
+### Package Structure
+
+<Accordion title="Package Organization">
+The application follows a clean package-by-layer structure:
+
+```
+com.raven.training/
+├── config/                    # Configuration classes
+│   ├── filter/               # Request/response filters
+│   └── security/             # Security configuration
+├── exception/                # Exception handling
+│   ├── error/                # Custom exception classes
+│   └── handler/              # Global exception handlers
+├── mapper/                   # DTO-Entity mappers
+├── persistence/              # Data layer
+│   ├── entity/               # JPA entities
+│   ├── model/                # Data models
+│   └── repository/           # Repository interfaces
+├── presentation/             # API layer
+│   ├── controller/           # REST controllers
+│   └── dto/                  # Data Transfer Objects
+├── service/                  # Business logic layer
+│   ├── implementation/       # Service implementations
+│   └── interfaces/           # Service contracts
+└── util/                     # Utility classes
+```
+</Accordion>
+
+## Key Technologies
+
+The application leverages the following Spring Boot ecosystem components:
+
+| Technology | Purpose | Version Reference |
+|------------|---------|-------------------|
+| **Spring Boot** | Application framework | Parent framework |
+| **Spring Security** | Authentication & authorization | Security module |
+| **Spring Data JPA** | Data persistence | JPA repositories |
+| **Spring Web** | REST API endpoints | Web MVC |
+| **MapStruct** | Object mapping | Compile-time mapper |
+| **Auth0 JWT** | JWT token handling | Token library |
+| **Lombok** | Boilerplate reduction | Annotations |
+
+<Note>
+All dependencies are managed through Spring Boot's dependency management system, ensuring compatible versions across the entire stack.
+</Note>
+
+## Request Flow
+
+Here's how a typical API request flows through the system:
+
+<Steps>
+  <Step title="Client Request">
+    A client sends an HTTP request with JWT token in the Authorization header
+  </Step>
+  <Step title="Security Filter">
+    `JwtTokenValidator` intercepts the request, validates the token, and sets authentication context
+  </Step>
+  <Step title="Controller">
+    Request reaches the appropriate controller (e.g., `BookController`), which validates input
+  </Step>
+  <Step title="Service Layer">
+    Controller delegates business logic to service implementation (e.g., `BookServiceImpl`)
+  </Step>
+  <Step title="Repository">
+    Service uses repository to interact with database via JPA
+  </Step>
+  <Step title="Mapper">
+    Entity is converted to DTO using MapStruct mapper
+  </Step>
+  <Step title="Response">
+    Controller returns ResponseEntity with appropriate HTTP status and DTO
+  </Step>
+</Steps>
+
+## Cross-Cutting Concerns
+
+### Exception Handling
+
+The `GlobalExceptionHandler` provides centralized error handling across all controllers, ensuring consistent error responses.
+
+**Location**: `src/main/java/com/raven/training/exception/handler/GlobalExceptionHandler.java`
+
+### Object Mapping
+
+MapStruct interfaces (`IBookMapper`, `IUserMapper`) automatically generate type-safe mapping code at compile time.
+
+### Transaction Management
+
+Services use `@Transactional` annotations for declarative transaction boundaries.
+
+### Validation
+
+Bean Validation (Jakarta Validation) is used for request validation at the controller level.
+
+## Design Patterns
+
+<CardGroup cols={2}>
+  <Card title="Repository Pattern" icon="database">
+    Data access abstraction through Spring Data JPA repositories
+  </Card>
+  <Card title="Service Layer Pattern" icon="gears">
+    Business logic encapsulated in dedicated service classes
+  </Card>
+  <Card title="DTO Pattern" icon="right-left">
+    Separation of internal models from API contracts
+  </Card>
+  <Card title="Dependency Injection" icon="syringe">
+    Constructor-based injection for better testability
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Layered Design" icon="layer-group" href="/architecture/layered-design">
+    Deep dive into the three-tier architecture
+  </Card>
+  <Card title="Security Architecture" icon="shield-halved" href="/architecture/security">
+    Learn about JWT authentication and authorization
+  </Card>
+</CardGroup>

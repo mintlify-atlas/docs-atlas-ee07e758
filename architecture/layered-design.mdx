@@ -1,0 +1,522 @@
+---
+title: 'Layered Architecture'
+description: 'Detailed explanation of the three-tier layered architecture pattern used in the Library Management API'
+---
+
+## Overview
+
+The Library Management API implements a **three-tier layered architecture** that separates concerns into distinct layers: Presentation, Service, and Persistence. This design promotes maintainability, testability, and scalability by enforcing clear boundaries between different aspects of the application.
+
+## The Three Layers
+
+```
+┌───────────────────────────────────────────────────────────┐
+│                   PRESENTATION LAYER                       │
+│  • REST Controllers                                        │
+│  • Request/Response DTOs                                   │
+│  • Input Validation                                        │
+│  • HTTP Status Mapping                                     │
+└───────────────────────┬───────────────────────────────────┘
+                        │
+                        │ Delegates business logic
+                        ▼
+┌───────────────────────────────────────────────────────────┐
+│                     SERVICE LAYER                          │
+│  • Business Logic                                          │
+│  • Transaction Management                                  │
+│  • Service Interfaces                                      │
+│  • Service Implementations                                 │
+└───────────────────────┬───────────────────────────────────┘
+                        │
+                        │ Performs data operations
+                        ▼
+┌───────────────────────────────────────────────────────────┐
+│                   PERSISTENCE LAYER                        │
+│  • JPA Repositories                                        │
+│  • Entity Classes                                          │
+│  • Database Queries                                        │
+│  • Data Models                                             │
+└───────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Presentation Layer
+
+The presentation layer handles all incoming HTTP requests and outgoing responses. It's responsible for exposing REST API endpoints and managing the contract between clients and the application.
+
+### Components
+
+<AccordionGroup>
+  <Accordion title="Controllers" icon="satellite-dish">
+    Controllers are annotated with `@RestController` and handle HTTP requests:
+
+    - **BookController** - Book management endpoints
+    - **UserController** - User management and book collections
+    - **AuthUserController** - Authentication and registration
+
+    **Location**: `src/main/java/com/raven/training/presentation/controller/`
+  </Accordion>
+
+  <Accordion title="Data Transfer Objects (DTOs)" icon="envelopes-bulk">
+    DTOs define the shape of request and response payloads:
+
+    - **BookRequest** / **BookResponse**
+    - **UserRequest** / **UserResponse**
+    - **AuthLoginRequest** / **AuthLoginResponse**
+    - **AuthRegisterRequest** / **AuthRegisterResponse**
+
+    **Location**: `src/main/java/com/raven/training/presentation/dto/`
+  </Accordion>
+</AccordionGroup>
+
+### Example: BookController
+
+Let's examine how the `BookController` handles a typical request:
+
+```java
+@RestController
+@RequestMapping("/api/v1/books")
+@AllArgsConstructor
+public class BookController {
+    
+    private final IBookService bookService;
+    
+    @GetMapping("/findById/{id}")
+    public ResponseEntity<BookResponse> findById(@PathVariable UUID id) {
+        return new ResponseEntity<>(bookService.findById(id), HttpStatus.OK);
+    }
+    
+    @PostMapping("/create")
+    public ResponseEntity<BookResponse> create(@RequestBody BookRequest bookRequest){
+        return new ResponseEntity<>(bookService.save(bookRequest), HttpStatus.CREATED);
+    }
+    
+    @PutMapping("/update/{id}")
+    public ResponseEntity<BookResponse> update(
+            @PathVariable UUID id, 
+            @RequestBody BookRequest bookRequest) {
+        return new ResponseEntity<>(bookService.update(id, bookRequest), HttpStatus.OK);
+    }
+    
+    @DeleteMapping("/delete/{id}")
+    public void delete(@PathVariable UUID id){
+        bookService.delete(id);
+    }
+}
+```
+
+**Full source**: `src/main/java/com/raven/training/presentation/controller/BookController.java:30-148`
+
+### Key Characteristics
+
+<CardGroup cols={2}>
+  <Card title="Thin Controllers" icon="weight-scale">
+    Controllers contain minimal logic - they delegate to services
+  </Card>
+  <Card title="HTTP Semantics" icon="code">
+    Proper use of HTTP methods (GET, POST, PUT, DELETE) and status codes
+  </Card>
+  <Card title="DTO Isolation" icon="shield">
+    Internal entities are never exposed directly to clients
+  </Card>
+  <Card title="Dependency Injection" icon="syringe">
+    Constructor injection for all dependencies using `@AllArgsConstructor`
+  </Card>
+</CardGroup>
+
+---
+
+## Service Layer
+
+The service layer contains the **business logic** of the application. It acts as a bridge between controllers and repositories, orchestrating complex operations and enforcing business rules.
+
+### Service Interfaces
+
+Service contracts are defined through interfaces, promoting loose coupling:
+
+```java
+public interface IBookService {
+    Page<BookResponse> findAll(String title, String author, 
+                               String gender, Pageable pageable);
+    BookResponse findById(UUID id);
+    BookResponse save(BookRequest bookRequest);
+    BookResponse update(UUID id, BookRequest bookRequest);
+    void delete(UUID id);
+}
+```
+
+**Location**: `src/main/java/com/raven/training/service/interfaces/IBookService.java:19-66`
+
+### Service Implementations
+
+Implementations contain the actual business logic:
+
+```java
+@Service
+@AllArgsConstructor
+public class BookServiceImpl implements IBookService {
+    
+    private IBookRepository bookRepository;
+    private IBookMapper bookMapper;
+    
+    @Override
+    @Transactional(readOnly = true)
+    public BookResponse findById(UUID id) {
+        Book book = bookRepository.findById(id)
+                .orElseThrow(BookNotFoundException::new);
+        
+        return bookMapper.toResponse(book);
+    }
+    
+    @Override
+    @Transactional
+    public BookResponse save(BookRequest bookRequest) {
+        Book book = bookMapper.toEntity(bookRequest);
+        Book savedBook = bookRepository.save(book);
+        
+        return bookMapper.toResponse(savedBook);
+    }
+    
+    @Override
+    @Transactional
+    public BookResponse update(UUID id, BookRequest bookRequest) {
+        return bookRepository.findById(id)
+                .map(existingBook -> {
+                    // Update only non-null fields
+                    if (bookRequest.title() != null && !bookRequest.title().trim().isEmpty()){
+                        existingBook.setTitle(bookRequest.title());
+                    }
+                    if (bookRequest.author() != null && !bookRequest.author().trim().isEmpty()){
+                        existingBook.setAuthor(bookRequest.author());
+                    }
+                    // ... more field updates
+                    
+                    Book bookUpdated = bookRepository.save(existingBook);
+                    return bookMapper.toResponse(bookUpdated);
+                })
+                .orElseThrow(BookNotFoundException::new);
+    }
+}
+```
+
+**Full source**: `src/main/java/com/raven/training/service/implementation/BookServiceImpl.java:27-156`
+
+### Service Layer Responsibilities
+
+<Steps>
+  <Step title="Business Logic Execution">
+    Implements all business rules and validations
+  </Step>
+  <Step title="Transaction Management">
+    Defines transaction boundaries with `@Transactional`
+  </Step>
+  <Step title="Entity-DTO Transformation">
+    Coordinates with mappers to convert between entities and DTOs
+  </Step>
+  <Step title="Exception Handling">
+    Throws domain-specific exceptions (e.g., `BookNotFoundException`)
+  </Step>
+  <Step title="Orchestration">
+    Coordinates multiple repository calls when needed
+  </Step>
+</Steps>
+
+### Transaction Management
+
+The service layer uses Spring's `@Transactional` annotation for declarative transaction management:
+
+<Tabs>
+  <Tab title="Read Operations">
+    ```java
+    @Transactional(readOnly = true)
+    public BookResponse findById(UUID id) {
+        // Read-only optimization
+    }
+    ```
+  </Tab>
+  <Tab title="Write Operations">
+    ```java
+    @Transactional
+    public BookResponse save(BookRequest bookRequest) {
+        // Full transaction with rollback on exception
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+Read-only transactions (`readOnly = true`) are optimized by the database and prevent accidental writes.
+</Note>
+
+---
+
+## Persistence Layer
+
+The persistence layer manages all database interactions using Spring Data JPA. It provides an abstraction over the database, allowing the service layer to work with domain objects without SQL knowledge.
+
+### JPA Repositories
+
+Repositories extend `JpaRepository` to inherit CRUD operations:
+
+```java
+@Repository
+public interface IBookRepository extends JpaRepository<Book, UUID> {
+    
+    @Query("""
+        SELECT b FROM Book b 
+        WHERE (COALESCE(:title, '') = '' OR LOWER(b.title) LIKE LOWER(CONCAT('%', :title, '%'))) 
+        AND (COALESCE(:author, '') = '' OR LOWER(b.author) LIKE LOWER(CONCAT('%', :author, '%'))) 
+        AND (COALESCE(:gender, '') = '' OR LOWER(b.gender) = LOWER(:gender))
+    """)
+    Page<Book> findAllWithFilters(
+            @Param("title") String title,
+            @Param("author") String author,
+            @Param("gender") String gender,
+            Pageable pageable
+    );
+    
+    Optional<Book> findByIsbn(String isbn);
+    
+    boolean existsByIsbn(String isbn);
+}
+```
+
+**Location**: `src/main/java/com/raven/training/persistence/repository/IBookRepository.java:24-65`
+
+### Entity Classes
+
+JPA entities represent database tables:
+
+```java
+@Entity
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Table(name = "book")
+public class Book {
+    
+    @Id
+    private UUID id;
+    
+    private String gender;
+    private String author;
+    private String image;
+    private String title;
+    private String subtitle;
+    private String publisher;
+    private String year;
+    private Integer pages;
+    private String isbn;
+    
+    @ManyToMany(mappedBy = "books", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<User> users = new ArrayList<>();
+    
+    @PrePersist
+    public void prePersist() {
+        if (id == null) {
+            id = UUID.randomUUID();
+        }
+    }
+}
+```
+
+**Location**: `src/main/java/com/raven/training/persistence/entity/Book.java:27-61`
+
+### Relationships
+
+The application models a **many-to-many relationship** between Users and Books:
+
+```
+┌─────────────┐         ┌──────────────┐         ┌─────────────┐
+│    User     │         │  user_books  │         │    Book     │
+├─────────────┤         │  (join table)│         ├─────────────┤
+│ id (PK)     │────────▶│ user_id (FK) │◀────────│ id (PK)     │
+│ userName    │         │ book_id (FK) │         │ title       │
+│ name        │         └──────────────┘         │ author      │
+│ birthDate   │                                  │ isbn        │
+│ books (List)│                                  │ users (List)│
+└─────────────┘                                  └─────────────┘
+```
+
+<Accordion title="Entity Relationship Code">
+**User Entity:**
+```java
+@ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+@JoinTable(
+    name = "user_books",
+    joinColumns = @JoinColumn(name = "user_id"),
+    inverseJoinColumns = @JoinColumn(name = "book_id")
+)
+private List<Book> books = new ArrayList<>();
+```
+
+**Book Entity:**
+```java
+@ManyToMany(mappedBy = "books", fetch = FetchType.LAZY)
+private List<User> users = new ArrayList<>();
+```
+</Accordion>
+
+---
+
+## The Mapping Layer
+
+While not a traditional "layer", the mapping layer plays a crucial role in converting between entities and DTOs.
+
+### MapStruct Mappers
+
+```java
+@Mapper(componentModel = "spring",
+        nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+public interface IBookMapper {
+    
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "users", ignore = true)
+    Book toEntity(BookRequest bookRequest);
+    
+    BookResponse toResponse(Book book);
+    
+    List<BookResponse> toResponseList(List<Book> bookList);
+}
+```
+
+**Location**: `src/main/java/com/raven/training/mapper/IBookMapper.java:22-53`
+
+<Note>
+MapStruct generates the implementation at **compile time**, not runtime, resulting in type-safe and performant mapping code.
+</Note>
+
+---
+
+## Complete Request Flow Example
+
+Let's trace a complete request to create a new book:
+
+<Steps>
+  <Step title="1. HTTP Request Arrives">
+    ```http
+    POST /api/v1/books/create
+    Authorization: Bearer <jwt-token>
+    Content-Type: application/json
+    
+    {
+      "title": "Clean Code",
+      "author": "Robert C. Martin",
+      "isbn": "978-0132350884",
+      "pages": 464
+    }
+    ```
+  </Step>
+
+  <Step title="2. Security Filter">
+    `JwtTokenValidator` validates the JWT token and sets authentication context
+  </Step>
+
+  <Step title="3. BookController.create()">
+    ```java
+    @PostMapping("/create")
+    public ResponseEntity<BookResponse> create(@RequestBody BookRequest bookRequest){
+        return new ResponseEntity<>(bookService.save(bookRequest), HttpStatus.CREATED);
+    }
+    ```
+    **File**: `BookController.java:122-124`
+  </Step>
+
+  <Step title="4. BookServiceImpl.save()">
+    ```java
+    @Transactional
+    public BookResponse save(BookRequest bookRequest) {
+        Book book = bookMapper.toEntity(bookRequest);  // DTO → Entity
+        Book savedBook = bookRepository.save(book);     // Persist to DB
+        return bookMapper.toResponse(savedBook);        // Entity → DTO
+    }
+    ```
+    **File**: `BookServiceImpl.java:84-91`
+  </Step>
+
+  <Step title="5. IBookMapper.toEntity()">
+    MapStruct converts `BookRequest` DTO to `Book` entity
+  </Step>
+
+  <Step title="6. IBookRepository.save()">
+    Spring Data JPA persists the entity to the database
+  </Step>
+
+  <Step title="7. IBookMapper.toResponse()">
+    MapStruct converts the saved `Book` entity to `BookResponse` DTO
+  </Step>
+
+  <Step title="8. HTTP Response">
+    ```http
+    HTTP/1.1 201 Created
+    Content-Type: application/json
+    
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "title": "Clean Code",
+      "author": "Robert C. Martin",
+      "isbn": "978-0132350884",
+      "pages": 464
+    }
+    ```
+  </Step>
+</Steps>
+
+---
+
+## Benefits of Layered Architecture
+
+<CardGroup cols={2}>
+  <Card title="Separation of Concerns" icon="layer-group">
+    Each layer has a single, well-defined responsibility
+  </Card>
+  <Card title="Testability" icon="flask">
+    Layers can be tested independently with mocks
+  </Card>
+  <Card title="Maintainability" icon="wrench">
+    Changes in one layer don't ripple to others
+  </Card>
+  <Card title="Reusability" icon="recycle">
+    Service logic can be reused by different controllers
+  </Card>
+  <Card title="Security" icon="lock">
+    Internal entities never exposed to external clients
+  </Card>
+  <Card title="Scalability" icon="chart-line">
+    Layers can be optimized or scaled independently
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Warning>
+**Anti-patterns to avoid:**
+- Controllers calling repositories directly (bypassing service layer)
+- Business logic in controllers or repositories
+- Exposing entity classes directly as API responses
+- Service methods without proper transaction boundaries
+</Warning>
+
+<Check>
+**Recommended practices:**
+- Always use DTOs for API contracts
+- Keep controllers thin - delegate to services
+- Define service contracts through interfaces
+- Use `@Transactional` appropriately
+- Handle exceptions at the appropriate layer
+</Check>
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Architecture Overview" icon="sitemap" href="/architecture/overview">
+    High-level architecture and design principles
+  </Card>
+  <Card title="Security Architecture" icon="shield" href="/architecture/security">
+    JWT authentication and authorization flow
+  </Card>
+</CardGroup>

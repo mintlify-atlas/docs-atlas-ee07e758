@@ -1,0 +1,167 @@
+---
+title: "List All Books"
+api: "GET /api/v1/books/findAll"
+description: "Retrieves a paginated list of books with optional filtering by title, author, and gender. Results are sorted by ID in ascending order."
+---
+
+## Authentication
+
+This endpoint requires a valid JWT token in the Authorization header.
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="0">
+  The page number to retrieve (0-indexed).
+</ParamField>
+
+<ParamField query="size" type="integer" default="10">
+  The number of items per page.
+</ParamField>
+
+<ParamField query="title" type="string" optional>
+  Filter books by title (case-sensitive partial match).
+</ParamField>
+
+<ParamField query="author" type="string" optional>
+  Filter books by author name (case-sensitive partial match).
+</ParamField>
+
+<ParamField query="gender" type="string" optional>
+  Filter books by genre/category.
+</ParamField>
+
+## Response
+
+<ResponseField name="page" type="array">
+  Array of book objects on the current page.
+  <Expandable title="BookResponse object">
+    <ResponseField name="id" type="string" format="uuid">
+      Unique identifier of the book.
+    </ResponseField>
+    <ResponseField name="gender" type="string">
+      The genre or category of the book.
+    </ResponseField>
+    <ResponseField name="author" type="string">
+      The author's name.
+    </ResponseField>
+    <ResponseField name="image" type="string">
+      URL or path to the book's cover image.
+    </ResponseField>
+    <ResponseField name="title" type="string">
+      The main title of the book.
+    </ResponseField>
+    <ResponseField name="subtitle" type="string">
+      The subtitle of the book.
+    </ResponseField>
+    <ResponseField name="publisher" type="string">
+      The name of the publisher.
+    </ResponseField>
+    <ResponseField name="year" type="string">
+      The publication year of the book.
+    </ResponseField>
+    <ResponseField name="pages" type="integer">
+      The number of pages in the book.
+    </ResponseField>
+    <ResponseField name="isbn" type="string">
+      The International Standard Book Number (ISBN).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="count" type="integer">
+  The number of items on the current page.
+</ResponseField>
+
+<ResponseField name="limit" type="integer">
+  The maximum number of items per page (same as `size` parameter).
+</ResponseField>
+
+<ResponseField name="offset" type="integer">
+  The starting position (index) of the first item on the current page.
+</ResponseField>
+
+<ResponseField name="total_pages" type="integer">
+  The total number of pages available.
+</ResponseField>
+
+<ResponseField name="total_count" type="integer">
+  The total number of items across all pages.
+</ResponseField>
+
+<ResponseField name="previous_page" type="integer" nullable>
+  The number of the previous page, or null if on the first page.
+</ResponseField>
+
+<ResponseField name="current_page" type="integer">
+  The number of the current page (1-indexed for display).
+</ResponseField>
+
+<ResponseField name="next_page" type="integer" nullable>
+  The number of the next page, or null if on the last page.
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.example.com/api/v1/books/findAll?page=0&size=10&author=Tolkien" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 OK
+{
+  "page": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "gender": "Fantasy",
+      "author": "J.R.R. Tolkien",
+      "image": "https://example.com/covers/lotr.jpg",
+      "title": "The Lord of the Rings",
+      "subtitle": "The Fellowship of the Ring",
+      "publisher": "Allen & Unwin",
+      "year": "1954",
+      "pages": 423,
+      "isbn": "978-0-618-00222-1"
+    },
+    {
+      "id": "650e8400-e29b-41d4-a716-446655440001",
+      "gender": "Fantasy",
+      "author": "J.R.R. Tolkien",
+      "image": "https://example.com/covers/hobbit.jpg",
+      "title": "The Hobbit",
+      "subtitle": "There and Back Again",
+      "publisher": "Allen & Unwin",
+      "year": "1937",
+      "pages": 310,
+      "isbn": "978-0-618-00221-4"
+    }
+  ],
+  "count": 2,
+  "limit": 10,
+  "offset": 0,
+  "total_pages": 1,
+  "total_count": 2,
+  "previous_page": null,
+  "current_page": 1,
+  "next_page": null
+}
+```
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Books retrieved successfully.
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid JWT token.
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  Valid token but insufficient permissions.
+</ResponseField>

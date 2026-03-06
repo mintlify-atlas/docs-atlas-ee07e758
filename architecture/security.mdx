@@ -1,0 +1,680 @@
+---
+title: 'Security Architecture'
+description: 'Comprehensive guide to the JWT-based authentication and authorization system'
+---
+
+## Overview
+
+The Library Management API implements a **stateless, JWT-based authentication system** using Spring Security. This architecture provides secure access control without the need for server-side session management, making it ideal for RESTful APIs and microservices.
+
+## Security Components
+
+The security layer consists of three main components working together:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Incoming Request                          │
+│              Authorization: Bearer <token>                   │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  SecurityFilterChain                         │
+│  • CSRF disabled (stateless API)                            │
+│  • Session policy: STATELESS                                │
+│  • Public endpoints: /api/v1/auth/**, /swagger-ui/**       │
+│  • Protected: all other endpoints                           │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│               JwtTokenValidator (Filter)                     │
+│  1. Extract JWT from Authorization header                   │
+│  2. Validate token signature and expiration                 │
+│  3. Extract username and authorities                        │
+│  4. Set authentication in SecurityContext                   │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     JwtUtils                                 │
+│  • Create JWT tokens                                        │
+│  • Validate JWT tokens                                      │
+│  • Extract claims from tokens                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Security Configuration
+
+### SecurityConfig Class
+
+The `SecurityConfig` class is the central configuration for Spring Security:
+
+```java
+@Configuration
+@EnableWebSecurity
+@AllArgsConstructor
+public class SecurityConfig {
+    private JwtUtils jwtUtils;
+    
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception{
+        httpSecurity
+            .csrf(csrf -> csrf.disable())
+            .httpBasic(Customizer.withDefaults())
+            .sessionManagement(session -> 
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(http -> {
+                // Swagger UI - public
+                http.requestMatchers("/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",
+                        "/swagger-resources/**",
+                        "/webjars/**").permitAll();
+                
+                // Authentication endpoints - public
+                http.requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll();
+                
+                // All other endpoints - require authentication
+                http.anyRequest().authenticated();
+            })
+            .addFilterBefore(new JwtTokenValidator(jwtUtils), 
+                           BasicAuthenticationFilter.class)
+            .exceptionHandling(Customizer.withDefaults());
+        
+        return httpSecurity.build();
+    }
+    
+    @Bean
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration authenticationConfiguration) throws Exception{
+        return authenticationConfiguration.getAuthenticationManager();
+    }
+    
+    @Bean
+    public AuthenticationProvider authenticationProvider(
+            UserDetailServiceImpl userDetailService){
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
+    
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+**Location**: `src/main/java/com/raven/training/config/security/SecurityConfig.java:38-121`
+
+### Key Configuration Elements
+
+<AccordionGroup>
+  <Accordion title="CSRF Protection" icon="shield-xmark">
+    **Disabled** for this API because it's stateless and uses JWT tokens:
+    ```java
+    .csrf(csrf -> csrf.disable())
+    ```
+    
+    <Note>
+    CSRF protection is unnecessary for stateless APIs where authentication is done via tokens in headers, not cookies.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Session Management" icon="clock">
+    **Stateless** session policy - no server-side sessions:
+    ```java
+    .sessionManagement(session -> 
+        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+    ```
+    
+    This ensures Spring Security doesn't create HTTP sessions, making the API truly stateless.
+  </Accordion>
+
+  <Accordion title="Authorization Rules" icon="lock">
+    Endpoint access control configuration:
+    
+    | Endpoint Pattern | Access Level |
+    |-----------------|--------------|
+    | `/swagger-ui/**` | Public (no auth) |
+    | `/v3/api-docs/**` | Public (no auth) |
+    | `POST /api/v1/auth/**` | Public (no auth) |
+    | All other endpoints | Authenticated users only |
+  </Accordion>
+
+  <Accordion title="Password Encoding" icon="key">
+    Uses **BCrypt** for secure password hashing:
+    ```java
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+    ```
+    
+    BCrypt is a one-way adaptive hash function with automatic salt generation.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## JWT Token Validator
+
+The `JwtTokenValidator` is a custom filter that intercepts every request to validate JWT tokens:
+
+```java
+@AllArgsConstructor
+public class JwtTokenValidator extends OncePerRequestFilter {
+    
+    private JwtUtils jwtUtils;
+    
+    @Override
+    protected void doFilterInternal(@NotNull HttpServletRequest request,
+                                    @NotNull HttpServletResponse response,
+                                    @NotNull FilterChain filterChain) 
+                                    throws ServletException, IOException {
+        
+        String jwtToken = request.getHeader(HttpHeaders.AUTHORIZATION);
+        
+        if (jwtToken != null && jwtToken.startsWith("Bearer ")) {
+            jwtToken = jwtToken.substring(7);  // Remove "Bearer " prefix
+            
+            DecodedJWT decodedJWT = jwtUtils.validationToken(jwtToken);
+            String username = jwtUtils.extractUsername(decodedJWT);
+            
+            Authentication authentication = 
+                new UsernamePasswordAuthenticationToken(username, null, null);
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(authentication);
+            SecurityContextHolder.setContext(context);
+        }
+        
+        filterChain.doFilter(request, response);
+    }
+}
+```
+
+**Location**: `src/main/java/com/raven/training/config/filter/JwtTokenValidator.java:31-79`
+
+### Filter Execution Flow
+
+<Steps>
+  <Step title="Extract Token">
+    Reads the `Authorization` header from the incoming request
+  </Step>
+  <Step title="Verify Format">
+    Checks if the token starts with "Bearer " prefix
+  </Step>
+  <Step title="Remove Prefix">
+    Extracts the actual JWT token by removing the "Bearer " prefix
+  </Step>
+  <Step title="Validate Token">
+    Calls `JwtUtils.validationToken()` to verify signature and expiration
+  </Step>
+  <Step title="Extract Username">
+    Retrieves the username from the decoded JWT's subject claim
+  </Step>
+  <Step title="Set Authentication">
+    Creates an `Authentication` object and sets it in the `SecurityContext`
+  </Step>
+  <Step title="Continue Chain">
+    Calls `filterChain.doFilter()` to proceed with the request
+  </Step>
+</Steps>
+
+<Note>
+The filter extends `OncePerRequestFilter` to ensure it's executed **exactly once per request**, even in complex filter chain scenarios.
+</Note>
+
+---
+
+## JWT Utilities
+
+The `JwtUtils` class provides core JWT functionality:
+
+```java
+@Component
+public class JwtUtils {
+    
+    @Value("${security.jwt.user.generator}")
+    private String userGenerator;
+    
+    @Value("${security.jwt.key.private}")
+    private String privateKey;
+    
+    /**
+     * Creates a new JWT token
+     */
+    public String createToken(Authentication authentication){
+        Algorithm algorithm = Algorithm.HMAC256(this.privateKey);
+        
+        String username = authentication.getPrincipal().toString();
+        String authorities = authentication.getAuthorities()
+                .stream()
+                .map(grantedAuthority -> grantedAuthority.getAuthority())
+                .collect(Collectors.joining(","));
+        
+        return JWT.create()
+                .withIssuer(this.userGenerator)
+                .withSubject(username)
+                .withClaim("authorities", authorities)
+                .withIssuedAt(new Date())
+                .withExpiresAt(new Date(System.currentTimeMillis() + 1800000)) // 30 min
+                .withJWTId(UUID.randomUUID().toString())
+                .withNotBefore(new Date(System.currentTimeMillis()))
+                .sign(algorithm);
+    }
+    
+    /**
+     * Validates a JWT token
+     */
+    public DecodedJWT validationToken(String token) throws JWTVerificationException {
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(this.privateKey);
+            
+            JWTVerifier verifier = JWT.require(algorithm)
+                    .withIssuer(this.userGenerator)
+                    .build();
+            
+            return verifier.verify(token);
+        } catch (JWTVerificationException exception) {
+            throw exception;
+        }
+    }
+    
+    /**
+     * Extracts username from decoded JWT
+     */
+    public String extractUsername(DecodedJWT decodedJWT){
+        return decodedJWT.getSubject().toString();
+    }
+    
+    /**
+     * Retrieves a specific claim
+     */
+    public Claim getSpecificClaim(DecodedJWT decodedJWT, String claimName){
+        return decodedJWT.getClaim(claimName);
+    }
+    
+    /**
+     * Extracts all claims
+     */
+    public Map<String, Claim> extractAllClaims(DecodedJWT decodedJWT){
+        return decodedJWT.getClaims();
+    }
+}
+```
+
+**Location**: `src/main/java/com/raven/training/util/JwtUtils.java:28-118`
+
+### JWT Token Structure
+
+A generated JWT contains the following claims:
+
+```json
+{
+  "iss": "library-api",           // Issuer (from config)
+  "sub": "john.doe",              // Subject (username)
+  "authorities": "ROLE_USER",     // User authorities
+  "iat": 1678901234,              // Issued at timestamp
+  "exp": 1678903034,              // Expires at (iat + 30 minutes)
+  "jti": "uuid-here",             // JWT ID (unique identifier)
+  "nbf": 1678901234               // Not before timestamp
+}
+```
+
+<Accordion title="JWT Configuration Properties">
+The JWT configuration is externalized in `application.properties` or `application.yml`:
+
+```properties
+security.jwt.user.generator=library-api
+security.jwt.key.private=your-secret-key-here
+```
+
+<Warning>
+In production, the private key should be:
+- **Strong** (at least 256 bits for HMAC256)
+- **Secret** (stored in environment variables or secret management service)
+- **Rotated** regularly
+</Warning>
+</Accordion>
+
+---
+
+## Authentication Flow
+
+### User Registration
+
+<Steps>
+  <Step title="Client Submits Registration">
+    ```http
+    POST /api/v1/auth/register
+    Content-Type: application/json
+    
+    {
+      "username": "john.doe",
+      "email": "john@example.com",
+      "password": "SecurePass123!",
+      "name": "John Doe",
+      "birthDate": "1990-01-01"
+    }
+    ```
+  </Step>
+
+  <Step title="AuthUserController Receives Request">
+    ```java
+    @PostMapping("/register")
+    public ResponseEntity<AuthRegisterResponse> register(
+            @RequestBody @Valid AuthRegisterRequest authRegisterRequest){
+        AuthRegisterResponse authRegisterResponse = 
+            userDetailService.registerUser(authRegisterRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(authRegisterResponse);
+    }
+    ```
+    **Location**: `AuthUserController.java:54-58`
+  </Step>
+
+  <Step title="UserDetailServiceImpl Processes Registration">
+    - Validates username and email uniqueness
+    - Hashes password using BCryptPasswordEncoder
+    - Creates `AuthUser` and `User` entities
+    - Saves to database
+  </Step>
+
+  <Step title="Response Sent">
+    ```http
+    HTTP/1.1 201 Created
+    Content-Type: application/json
+    
+    {
+      "username": "john.doe",
+      "message": "User registered successfully"
+    }
+    ```
+  </Step>
+</Steps>
+
+### User Login
+
+<Steps>
+  <Step title="Client Submits Credentials">
+    ```http
+    POST /api/v1/auth/login
+    Content-Type: application/json
+    
+    {
+      "username": "john.doe",
+      "password": "SecurePass123!"
+    }
+    ```
+  </Step>
+
+  <Step title="AuthUserController Receives Request">
+    ```java
+    @PostMapping("/login")
+    public ResponseEntity<AuthLoginResponse> login(
+            @RequestBody @Valid AuthLoginRequest authLoginRequest){
+        AuthLoginResponse authLoginResponse = 
+            userDetailService.loginUser(authLoginRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(authLoginResponse);
+    }
+    ```
+    **Location**: `AuthUserController.java:40-44`
+  </Step>
+
+  <Step title="UserDetailServiceImpl Authenticates User">
+    - Retrieves user from database
+    - Validates password against stored hash
+    - Creates `Authentication` object
+    - Calls `JwtUtils.createToken()` to generate JWT
+  </Step>
+
+  <Step title="JWT Token Returned">
+    ```http
+    HTTP/1.1 201 Created
+    Content-Type: application/json
+    
+    {
+      "username": "john.doe",
+      "message": "Login successful",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "status": true
+    }
+    ```
+  </Step>
+</Steps>
+
+### Authenticated Request
+
+<Steps>
+  <Step title="Client Includes JWT in Header">
+    ```http
+    GET /api/v1/books/findAll
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    ```
+  </Step>
+
+  <Step title="JwtTokenValidator Intercepts">
+    - Extracts and validates token
+    - Sets authentication in SecurityContext
+  </Step>
+
+  <Step title="Request Proceeds to Controller">
+    ```java
+    @GetMapping("/findAll")
+    public ResponseEntity<CustomPageableResponse<BookResponse>> findAll(...) {
+        // SecurityContextHolder contains authenticated user
+        Page<BookResponse> booksPage = bookService.findAll(...);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    ```
+  </Step>
+
+  <Step title="Service Accesses Current User">
+    ```java
+    public UserResponse getCurrentUser() {
+        String username = SecurityContextHolder.getContext()
+                                              .getAuthentication()
+                                              .getName();
+        // Retrieve user details
+    }
+    ```
+  </Step>
+</Steps>
+
+---
+
+## Security Flow Diagram
+
+```
+┌──────────┐                                                 ┌──────────┐
+│  Client  │                                                 │   API    │
+└────┬─────┘                                                 └────┬─────┘
+     │                                                            │
+     │  1. POST /auth/register                                   │
+     │  { username, password, email }                            │
+     ├──────────────────────────────────────────────────────────▶│
+     │                                                            │
+     │                                2. Hash password (BCrypt)   │
+     │                                3. Save user to DB          │
+     │                                                            │
+     │  4. 201 Created                                           │
+     │  { message: "User registered" }                           │
+     │◀──────────────────────────────────────────────────────────┤
+     │                                                            │
+     │  5. POST /auth/login                                      │
+     │  { username, password }                                   │
+     ├──────────────────────────────────────────────────────────▶│
+     │                                                            │
+     │                          6. Validate credentials           │
+     │                          7. Create Authentication object   │
+     │                          8. Generate JWT token             │
+     │                                                            │
+     │  9. 201 Created                                           │
+     │  { token: "eyJhbGc..." }                                  │
+     │◀──────────────────────────────────────────────────────────┤
+     │                                                            │
+     │  10. GET /books/findAll                                   │
+     │  Authorization: Bearer eyJhbGc...                         │
+     ├──────────────────────────────────────────────────────────▶│
+     │                                                            │
+     │                       ┌────────────────────────┐          │
+     │                       │ JwtTokenValidator      │          │
+     │                       ├────────────────────────┤          │
+     │                       │ 11. Extract token      │          │
+     │                       │ 12. Validate signature │          │
+     │                       │ 13. Check expiration   │          │
+     │                       │ 14. Set SecurityContext│          │
+     │                       └────────────────────────┘          │
+     │                                                            │
+     │                                       15. Process request  │
+     │                                       16. Query database   │
+     │                                                            │
+     │  17. 200 OK                                               │
+     │  { data: [...] }                                          │
+     │◀──────────────────────────────────────────────────────────┤
+     │                                                            │
+```
+
+---
+
+## Authorization vs Authentication
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="user-check">
+    **"Who are you?"**
+    
+    Handled by:
+    - `UserDetailServiceImpl`
+    - `AuthenticationManager`
+    - `BCryptPasswordEncoder`
+    
+    Verifies user identity through credentials
+  </Card>
+  
+  <Card title="Authorization" icon="key">
+    **"What can you do?"**
+    
+    Handled by:
+    - `SecurityFilterChain`
+    - `JwtTokenValidator`
+    - Endpoint access rules
+    
+    Controls access to protected resources
+  </Card>
+</CardGroup>
+
+<Note>
+Currently, the API uses **authentication** only. All authenticated users have the same access level. To implement role-based access control (RBAC), you would need to:
+1. Add roles/authorities to `AuthUser` entity
+2. Include roles in JWT claims
+3. Use `@PreAuthorize` or configure method-level security
+4. Add authorization checks in `SecurityConfig`
+</Note>
+
+---
+
+## Security Best Practices
+
+<Check>
+**Implemented in this API:**
+- ✅ Stateless authentication (JWT)
+- ✅ Password hashing (BCrypt)
+- ✅ Token expiration (30 minutes)
+- ✅ HTTPS recommended for production
+- ✅ CSRF protection disabled (appropriate for stateless API)
+- ✅ Public endpoints for documentation
+</Check>
+
+<Warning>
+**Production considerations:**
+- 🔐 Use environment variables for JWT secret key
+- 🔐 Implement token refresh mechanism
+- 🔐 Add rate limiting for auth endpoints
+- 🔐 Implement account lockout after failed attempts
+- 🔐 Use HTTPS/TLS in production
+- 🔐 Consider adding role-based authorization
+- 🔐 Implement token blacklisting for logout
+- 🔐 Add logging and monitoring for security events
+</Warning>
+
+---
+
+## Common Security Scenarios
+
+<AccordionGroup>
+  <Accordion title="Expired Token" icon="clock">
+    **What happens:**
+    ```java
+    JWTVerificationException: The Token has expired
+    ```
+    
+    **Solution:**
+    - Client must request a new token by logging in again
+    - Or implement a refresh token mechanism
+  </Accordion>
+
+  <Accordion title="Invalid Token Signature" icon="triangle-exclamation">
+    **What happens:**
+    ```java
+    JWTVerificationException: The Token's Signature resulted invalid
+    ```
+    
+    **Causes:**
+    - Token was tampered with
+    - Wrong secret key used
+    - Token not signed properly
+    
+    **Solution:**
+    - Client must obtain a valid token through login
+  </Accordion>
+
+  <Accordion title="Missing Authorization Header" icon="ban">
+    **What happens:**
+    - Request proceeds without authentication
+    - Protected endpoints return 403 Forbidden or 401 Unauthorized
+    
+    **Solution:**
+    - Client must include `Authorization: Bearer <token>` header
+  </Accordion>
+
+  <Accordion title="Accessing Current User" icon="user">
+    **In any service or controller:**
+    ```java
+    Authentication authentication = SecurityContextHolder.getContext()
+                                                         .getAuthentication();
+    String currentUsername = authentication.getName();
+    ```
+    
+    **Example from UserServiceImpl:**
+    ```java
+    public UserResponse getCurrentUser() {
+        String username = SecurityContextHolder.getContext()
+                                              .getAuthentication()
+                                              .getName();
+        User user = userRepository.findByUserName(username)
+                                  .orElseThrow(UserNotFoundException::new);
+        return userMapper.toResponse(user);
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Architecture Overview" icon="sitemap" href="/architecture/overview">
+    High-level architecture and components
+  </Card>
+  <Card title="Layered Design" icon="layer-group" href="/architecture/layered-design">
+    Three-tier architecture pattern
+  </Card>
+  <Card title="Authentication Endpoints" icon="right-to-bracket" href="/api/auth/login">
+    API endpoints for login and registration
+  </Card>
+</CardGroup>

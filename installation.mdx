@@ -1,0 +1,514 @@
+---
+title: 'Installation'
+description: 'Complete installation guide for the Library Management API'
+icon: 'download'
+---
+
+This guide provides detailed instructions for installing and configuring the Library Management API on your local development environment.
+
+## System Requirements
+
+Before installing the application, ensure your system meets the following requirements:
+
+### Required Software
+
+<CardGroup cols={2}>
+  <Card title="Java JDK 21" icon="java">
+    The application is built with Java 21 and requires this specific version.
+  </Card>
+  <Card title="Apache Maven" icon="box">
+    Maven 3.6+ is required for building and managing dependencies.
+  </Card>
+  <Card title="PostgreSQL" icon="database">
+    PostgreSQL 12+ is required for data persistence.
+  </Card>
+  <Card title="Git" icon="git">
+    Git is needed to clone the repository.
+  </Card>
+</CardGroup>
+
+### Hardware Requirements
+
+- **RAM**: Minimum 2GB, recommended 4GB+
+- **Disk Space**: At least 500MB for the application and dependencies
+- **CPU**: Any modern processor (dual-core or better recommended)
+
+## Installation Steps
+
+<Steps>
+  <Step title="Install Java JDK 21">
+    Download and install Java JDK 21 from [Oracle](https://www.oracle.com/java/technologies/downloads/#java21) or [OpenJDK](https://jdk.java.net/21/).
+
+    Verify the installation:
+
+    ```bash
+    java -version
+    ```
+
+    Expected output:
+    ```
+    java version "21.0.x"
+    Java(TM) SE Runtime Environment (build 21.0.x+xx)
+    ```
+
+    <Note>
+      Make sure `JAVA_HOME` is set correctly in your environment variables.
+    </Note>
+  </Step>
+
+  <Step title="Install Apache Maven">
+    Download Maven from the [official website](https://maven.apache.org/download.cgi) and follow the installation instructions for your operating system.
+
+    Verify the installation:
+
+    ```bash
+    mvn -version
+    ```
+
+    Expected output:
+    ```
+    Apache Maven 3.9.x
+    Maven home: /path/to/maven
+    Java version: 21.0.x
+    ```
+  </Step>
+
+  <Step title="Install PostgreSQL">
+    Install PostgreSQL from the [official website](https://www.postgresql.org/download/) or use your system's package manager:
+
+    <CodeGroup>
+    ```bash Ubuntu/Debian
+    sudo apt update
+    sudo apt install postgresql postgresql-contrib
+    sudo systemctl start postgresql
+    ```
+
+    ```bash macOS (Homebrew)
+    brew install postgresql@15
+    brew services start postgresql@15
+    ```
+
+    ```bash Windows
+    # Download the installer from postgresql.org
+    # Run the installer and follow the setup wizard
+    ```
+    </CodeGroup>
+
+    Verify PostgreSQL is running:
+
+    ```bash
+    psql --version
+    ```
+  </Step>
+
+  <Step title="Clone the repository">
+    Clone the project repository from GitHub:
+
+    ```bash
+    git clone https://github.com/Raven-Training/jc-java-training.git
+    cd jc-java-training
+    ```
+  </Step>
+</Steps>
+
+## Database Configuration
+
+<Steps>
+  <Step title="Create the database">
+    Connect to PostgreSQL and create the application database:
+
+    ```bash
+    psql -U postgres
+    ```
+
+    Then in the PostgreSQL console:
+
+    ```sql
+    CREATE DATABASE book;
+    ```
+
+    You can verify the database was created:
+
+    ```sql
+    \l
+    ```
+
+    Exit the PostgreSQL console:
+
+    ```sql
+    \q
+    ```
+  </Step>
+
+  <Step title="Configure database credentials">
+    The application uses environment variables for database configuration. These are referenced in `src/main/resources/application.properties`:
+
+    ```properties
+    spring.datasource.url=${db_url}
+    spring.datasource.username=${db_username}
+    spring.datasource.password=${db_password}
+    spring.datasource.driver-class-name=org.postgresql.Driver
+    ```
+
+    Set the required environment variables:
+
+    <CodeGroup>
+    ```bash Linux/macOS
+    export db_url="jdbc:postgresql://localhost:5432/book"
+    export db_username="postgres"
+    export db_password="your_password"
+    ```
+
+    ```powershell Windows PowerShell
+    $env:db_url="jdbc:postgresql://localhost:5432/book"
+    $env:db_username="postgres"
+    $env:db_password="your_password"
+    ```
+
+    ```cmd Windows CMD
+    set db_url=jdbc:postgresql://localhost:5432/book
+    set db_username=postgres
+    set db_password=your_password
+    ```
+    </CodeGroup>
+
+    <Warning>
+      Replace `your_password` with your actual PostgreSQL password. Never commit credentials to version control.
+    </Warning>
+  </Step>
+
+  <Step title="Understand the database auto-configuration">
+    The application is configured with `spring.jpa.hibernate.ddl-auto=create-drop` in `application.properties`:
+
+    ```properties
+    spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    spring.jpa.hibernate.ddl-auto=create-drop
+    ```
+
+    <Note>
+      **create-drop**: The database schema is automatically created when the application starts and dropped when it stops. This is useful for development but **should be changed to `update` or `validate` for production**.
+    </Note>
+
+    For production environments, change this to:
+
+    ```properties
+    spring.jpa.hibernate.ddl-auto=update
+    ```
+  </Step>
+</Steps>
+
+## Application Configuration
+
+<Steps>
+  <Step title="Configure JWT security">
+    The application uses JWT (JSON Web Token) for authentication. Configure the JWT settings using environment variables:
+
+    <CodeGroup>
+    ```bash Linux/macOS
+    export user_jwt="library-api-user"
+    export key_jwt="your-secret-jwt-key-at-least-256-bits-long"
+    ```
+
+    ```powershell Windows PowerShell
+    $env:user_jwt="library-api-user"
+    $env:key_jwt="your-secret-jwt-key-at-least-256-bits-long"
+    ```
+
+    ```cmd Windows CMD
+    set user_jwt=library-api-user
+    set key_jwt=your-secret-jwt-key-at-least-256-bits-long
+    ```
+    </CodeGroup>
+
+    These variables are referenced in `application.properties`:
+
+    ```properties
+    security.jwt.user.generator=${user_jwt}
+    security.jwt.key.private=${key_jwt}
+    ```
+
+    <Warning>
+      The `key_jwt` must be a secure random string of at least 256 bits (32 characters). Use a strong, randomly generated key for production environments.
+    </Warning>
+
+    You can generate a secure key using:
+
+    ```bash
+    openssl rand -base64 32
+    ```
+  </Step>
+
+  <Step title="Configure server port (optional)">
+    The application runs on port 8081 by default:
+
+    ```properties
+    server.port=8081
+    ```
+
+    To change the port, you can:
+
+    - Modify `application.properties`
+    - Set an environment variable: `export server.port=9090`
+    - Use a command-line argument: `mvn spring-boot:run -Dserver.port=9090`
+  </Step>
+
+  <Step title="Review application configuration">
+    The complete `application.properties` file includes:
+
+    ```properties
+    spring.application.name=training
+
+    # PostgreSQL Database Configuration
+    spring.datasource.url=${db_url}
+    spring.datasource.username=${db_username}
+    spring.datasource.password=${db_password}
+
+    # PostgreSQL Driver
+    spring.datasource.driver-class-name=org.postgresql.Driver
+
+    # Hibernate/JPA Configurations
+    spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+    spring.jpa.hibernate.ddl-auto=create-drop
+
+    server.port=8081
+
+    security.jwt.user.generator=${user_jwt}
+    security.jwt.key.private=${key_jwt}
+    ```
+
+    <Note>
+      All environment variables must be set before starting the application, or it will fail to start.
+    </Note>
+  </Step>
+</Steps>
+
+## Building and Running
+
+<Steps>
+  <Step title="Install dependencies">
+    Download all project dependencies using Maven:
+
+    ```bash
+    mvn clean install
+    ```
+
+    This command will:
+    - Clean previous builds
+    - Download dependencies from Maven Central
+    - Compile the source code
+    - Run tests
+    - Package the application as a JAR file
+
+    The build process may take a few minutes the first time as Maven downloads dependencies.
+  </Step>
+
+  <Step title="Run the application">
+    Start the Spring Boot application:
+
+    ```bash
+    mvn spring-boot:run
+    ```
+
+    Alternatively, run the packaged JAR file:
+
+    ```bash
+    java -jar target/training-0.0.1-SNAPSHOT.jar
+    ```
+
+    <Note>
+      Make sure all environment variables are set in your current shell session before running the application.
+    </Note>
+  </Step>
+
+  <Step title="Verify the application is running">
+    Once started, you should see output similar to:
+
+    ```
+    Started TrainingApplication in X.XXX seconds
+    ```
+
+    Test the application by accessing:
+
+    ```bash
+    curl http://localhost:8081/swagger-ui/index.html
+    ```
+
+    Or open the URL in your browser to access the Swagger UI.
+  </Step>
+</Steps>
+
+## Project Dependencies
+
+The application uses the following key dependencies (from `pom.xml`):
+
+<CardGroup cols={2}>
+  <Card title="Spring Boot 3.5.3" icon="leaf">
+    Core framework for building the REST API
+  </Card>
+  <Card title="Spring Security" icon="shield">
+    Security framework with JWT authentication
+  </Card>
+  <Card title="Spring Data JPA" icon="database">
+    Data persistence and ORM with Hibernate
+  </Card>
+  <Card title="PostgreSQL Driver" icon="elephant">
+    JDBC driver for PostgreSQL connectivity
+  </Card>
+  <Card title="Auth0 JWT 4.4.0" icon="key">
+    JWT token generation and validation
+  </Card>
+  <Card title="MapStruct 1.6.3" icon="map">
+    Object mapping between DTOs and entities
+  </Card>
+  <Card title="Lombok 1.18.32" icon="code">
+    Reduces boilerplate code with annotations
+  </Card>
+  <Card title="SpringDoc OpenAPI 2.8.9" icon="book">
+    Generates Swagger/OpenAPI documentation
+  </Card>
+</CardGroup>
+
+## Development Tools
+
+### Hot Reload
+
+The application includes Spring Boot DevTools for automatic restart during development:
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-devtools</artifactId>
+    <scope>runtime</scope>
+    <optional>true</optional>
+</dependency>
+```
+
+Changes to Java files will automatically trigger an application restart.
+
+### Testing
+
+Run the test suite:
+
+```bash
+mvn test
+```
+
+Generate code coverage report with JaCoCo:
+
+```bash
+mvn clean test jacoco:report
+```
+
+The coverage report will be available at `target/site/jacoco/index.html`.
+
+<Note>
+  The project is configured with an 80% code coverage requirement at the package level.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Environment variables not found">
+    **Error**: `Could not resolve placeholder 'db_url' in value "${db_url}"`
+
+    **Solution**: Ensure all required environment variables are set in your current shell session:
+    - `db_url`
+    - `db_username`
+    - `db_password`
+    - `user_jwt`
+    - `key_jwt`
+
+    Verify with:
+    ```bash
+    echo $db_url  # Linux/macOS
+    echo %db_url%  # Windows CMD
+    echo $env:db_url  # Windows PowerShell
+    ```
+  </Accordion>
+
+  <Accordion title="Database connection failed">
+    **Error**: `Connection to localhost:5432 refused`
+
+    **Solution**:
+    1. Verify PostgreSQL is running:
+       ```bash
+       sudo systemctl status postgresql  # Linux
+       brew services list  # macOS
+       ```
+    2. Check that PostgreSQL is listening on port 5432
+    3. Verify your credentials are correct
+    4. Ensure the `book` database exists
+  </Accordion>
+
+  <Accordion title="Port 8081 already in use">
+    **Error**: `Port 8081 is already in use`
+
+    **Solution**: Either stop the other application using port 8081, or change the application port:
+    ```bash
+    mvn spring-boot:run -Dserver.port=9090
+    ```
+  </Accordion>
+
+  <Accordion title="Maven build fails">
+    **Error**: Various Maven compilation errors
+
+    **Solution**:
+    1. Ensure you're using Java 21:
+       ```bash
+       java -version
+       ```
+    2. Clean the Maven cache:
+       ```bash
+       mvn clean
+       ```
+    3. Force update dependencies:
+       ```bash
+       mvn clean install -U
+       ```
+  </Accordion>
+
+  <Accordion title="JWT token errors">
+    **Error**: Token signature verification failed
+
+    **Solution**: Ensure the `key_jwt` environment variable is:
+    1. Set before starting the application
+    2. At least 256 bits (32 characters) long
+    3. The same value used to generate the tokens
+
+    The key must remain consistent across application restarts for existing tokens to remain valid.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Follow the quick start guide to make your first API calls
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture/overview">
+    Learn about the application's layered architecture
+  </Card>
+  <Card title="Authentication" icon="lock" href="/authentication/overview">
+    Understand JWT authentication and security
+  </Card>
+  <Card title="API Reference" icon="book-open" href="/api/introduction">
+    Explore all available API endpoints
+  </Card>
+</CardGroup>
+
+## Production Deployment
+
+For production deployments, consider:
+
+<Warning>
+  **Important Production Changes:**
+  
+  1. Change `spring.jpa.hibernate.ddl-auto` from `create-drop` to `update` or `validate`
+  2. Use a secure, randomly generated JWT key (minimum 256 bits)
+  3. Store credentials securely (use secrets management, not environment variables)
+  4. Configure proper database connection pooling
+  5. Enable HTTPS/TLS
+  6. Set up proper logging and monitoring
+  7. Review and configure security headers
+  8. Disable Swagger UI in production or protect it with authentication
+</Warning>

@@ -1,0 +1,281 @@
+---
+title: Development Environment Setup
+description: Step-by-step guide to setting up your local development environment for the Library Management API
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed on your development machine:
+
+<CardGroup cols={2}>
+  <Card title="Java JDK 21" icon="coffee">
+    Required for running and building the application
+  </Card>
+  <Card title="Apache Maven" icon="box">
+    Build automation and dependency management
+  </Card>
+  <Card title="PostgreSQL" icon="database">
+    Primary database for the application
+  </Card>
+  <Card title="Git" icon="git-alt">
+    Version control system
+  </Card>
+</CardGroup>
+
+## Clone the Repository
+
+Start by cloning the project repository:
+
+```bash
+git clone https://github.com/Raven-Training/jc-java-training.git
+cd jc-java-training
+```
+
+## Database Configuration
+
+### Create PostgreSQL Database
+
+Create a new PostgreSQL database named `book`:
+
+```sql
+CREATE DATABASE book;
+```
+
+### Configure Application Properties
+
+The application uses environment variables for database configuration. Set the following environment variables:
+
+```bash
+export db_url="jdbc:postgresql://localhost:5432/book"
+export db_username="your_postgres_username"
+export db_password="your_postgres_password"
+```
+
+<Note>
+  The application uses `spring.jpa.hibernate.ddl-auto=create-drop` in development mode, which will recreate the database schema on each startup.
+</Note>
+
+### JWT Configuration
+
+Configure JWT security by setting these environment variables:
+
+```bash
+export user_jwt="your_jwt_user_identifier"
+export key_jwt="your_secret_jwt_key"
+```
+
+<Warning>
+  Never commit sensitive credentials to version control. Use environment variables or a secure secrets management solution.
+</Warning>
+
+## Dependencies Overview
+
+The project uses the following key dependencies (defined in `pom.xml`):
+
+### Core Dependencies
+
+| Dependency | Version | Purpose |
+|------------|---------|----------|
+| Spring Boot | 3.5.3 | Application framework |
+| Java | 21 | Programming language |
+| PostgreSQL Driver | Latest | Database connectivity |
+| Spring Data JPA | 3.5.3 | Database abstraction layer |
+
+### Additional Libraries
+
+| Library | Version | Purpose |
+|---------|---------|----------|
+| MapStruct | 1.6.3 | Object mapping |
+| Lombok | 1.18.32 | Boilerplate code reduction |
+| SpringDoc OpenAPI | 2.8.9 | API documentation (Swagger) |
+| Spring Security | 3.5.3 | Authentication & authorization |
+| Auth0 JWT | 4.4.0 | JWT token handling |
+| JaCoCo | 0.8.13 | Code coverage analysis |
+
+## Build the Project
+
+### Using Maven Wrapper
+
+The project includes a Maven wrapper for consistent builds:
+
+<Tabs>
+  <Tab title="Linux/macOS">
+    ```bash
+    ./mvnw clean install
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```bash
+    mvnw.cmd clean install
+    ```
+  </Tab>
+</Tabs>
+
+### Using System Maven
+
+If you have Maven installed globally:
+
+```bash
+mvn clean install
+```
+
+<Info>
+  The build process includes:
+  - Compilation of Java sources
+  - Running all unit and integration tests
+  - Generation of MapStruct implementations
+  - Code coverage analysis with JaCoCo
+  - Packaging the application as a JAR file
+</Info>
+
+## MapStruct Configuration
+
+The project uses **MapStruct** for object mapping between layers. The annotation processor is configured in `pom.xml`:
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-compiler-plugin</artifactId>
+    <configuration>
+        <annotationProcessorPaths>
+            <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>1.18.32</version>
+            </path>
+            <path>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct-processor</artifactId>
+                <version>1.6.3</version>
+            </path>
+            <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok-mapstruct-binding</artifactId>
+                <version>0.2.0</version>
+            </path>
+        </annotationProcessorPaths>
+    </configuration>
+</plugin>
+```
+
+<Note>
+  The order of annotation processors is important! Lombok must be processed before MapStruct to ensure proper code generation.
+</Note>
+
+## Running the Application
+
+### Development Mode
+
+Run the application using Spring Boot Maven plugin:
+
+<Tabs>
+  <Tab title="Maven Wrapper">
+    ```bash
+    ./mvnw spring-boot:run
+    ```
+  </Tab>
+  <Tab title="System Maven">
+    ```bash
+    mvn spring-boot:run
+    ```
+  </Tab>
+  <Tab title="Java JAR">
+    ```bash
+    java -jar target/training-0.0.1-SNAPSHOT.jar
+    ```
+  </Tab>
+</Tabs>
+
+The application will start on **port 8081** by default.
+
+### Verify Installation
+
+Once the application is running, verify it's working:
+
+```bash
+curl http://localhost:8081/swagger-ui/index.html
+```
+
+You should see the Swagger UI interface for exploring the API.
+
+## IDE Setup
+
+### IntelliJ IDEA
+
+1. **Install Lombok Plugin**: Go to Settings → Plugins → Search for "Lombok" → Install
+2. **Enable Annotation Processing**: Settings → Build, Execution, Deployment → Compiler → Annotation Processors → Enable annotation processing
+3. **Import Project**: File → Open → Select `pom.xml`
+
+### Eclipse
+
+1. **Install Lombok**: Download lombok.jar and run `java -jar lombok.jar`
+2. **Import Maven Project**: File → Import → Maven → Existing Maven Projects
+
+### VS Code
+
+1. **Install Extensions**:
+   - Language Support for Java
+   - Spring Boot Extension Pack
+   - Lombok Annotations Support
+2. **Open Project**: File → Open Folder → Select project directory
+
+## Development Tools
+
+### Spring Boot DevTools
+
+The project includes Spring Boot DevTools for automatic restart:
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-devtools</artifactId>
+    <scope>runtime</scope>
+    <optional>true</optional>
+</dependency>
+```
+
+DevTools automatically restarts the application when class files change.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Learn about the application architecture and package organization
+  </Card>
+  <Card title="Testing" icon="vial" href="/development/testing">
+    Understand the testing strategy and how to run tests
+  </Card>
+  <Card title="API Endpoints" icon="code" href="/api/books/list">
+    Explore the available API endpoints
+  </Card>
+  <Card title="Authentication" icon="lock" href="/authentication/overview">
+    Learn about JWT authentication implementation
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="MapStruct implementations not generated">
+    Run `mvn clean compile` to regenerate MapStruct implementations. Ensure annotation processing is enabled in your IDE.
+  </Accordion>
+  
+  <Accordion title="Database connection errors">
+    Verify PostgreSQL is running and the environment variables are set correctly:
+    ```bash
+    echo $db_url
+    echo $db_username
+    ```
+  </Accordion>
+  
+  <Accordion title="Port 8081 already in use">
+    Change the port in `application.properties`:
+    ```properties
+    server.port=8082
+    ```
+  </Accordion>
+  
+  <Accordion title="Build fails with Lombok errors">
+    Ensure Lombok is properly installed in your IDE and annotation processing is enabled.
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,125 @@
+---
+title: "Search Book by ISBN"
+api: "GET /api/v1/books/isbn/{isbn}"
+description: "Searches for a book by its ISBN. First checks the local database, and if not found, queries the OpenLibrary external API. If found externally, the book is automatically saved to the local database."
+---
+
+## Authentication
+
+This endpoint requires a valid JWT token in the Authorization header.
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Path Parameters
+
+<ParamField path="isbn" type="string" required>
+  The International Standard Book Number (ISBN) to search for. Supports both ISBN-10 and ISBN-13 formats.
+</ParamField>
+
+## Response
+
+This endpoint returns a `BookResponseDTO` object, which differs from the standard `BookResponse` format.
+
+<ResponseField name="isbn" type="string">
+  The International Standard Book Number (ISBN).
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The main title of the book.
+</ResponseField>
+
+<ResponseField name="subtitle" type="string">
+  The subtitle of the book.
+</ResponseField>
+
+<ResponseField name="publishers" type="array" itemType="string">
+  List of publisher names.
+</ResponseField>
+
+<ResponseField name="publishDate" type="string">
+  The publication date of the book.
+</ResponseField>
+
+<ResponseField name="numberOfPages" type="integer">
+  The number of pages in the book.
+</ResponseField>
+
+<ResponseField name="authors" type="array" itemType="string">
+  List of author names.
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.example.com/api/v1/books/isbn/978-0-618-00222-1" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 OK - Found in Database
+{
+  "isbn": "978-0-618-00222-1",
+  "title": "The Lord of the Rings",
+  "subtitle": "The Fellowship of the Ring",
+  "publishers": ["Allen & Unwin", "Houghton Mifflin"],
+  "publishDate": "1954",
+  "numberOfPages": 423,
+  "authors": ["J.R.R. Tolkien"]
+}
+```
+
+```json 201 Created - Found in OpenLibrary and Added to Database
+{
+  "isbn": "978-0-547-92822-7",
+  "title": "The Hobbit",
+  "subtitle": "There and Back Again",
+  "publishers": ["Houghton Mifflin Harcourt"],
+  "publishDate": "2012-09-18",
+  "numberOfPages": 310,
+  "authors": ["J.R.R. Tolkien"]
+}
+```
+
+```json 404 Not Found
+{
+  "timestamp": "2026-03-06T10:30:00.000+00:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Book not found with ISBN: 978-9999999999",
+  "path": "/api/v1/books/isbn/978-9999999999"
+}
+```
+</ResponseExample>
+
+## OpenLibrary Integration
+
+This endpoint integrates with the [OpenLibrary API](https://openlibrary.org/developers/api) to fetch book information when a book is not found in the local database. The integration workflow is:
+
+1. **Local Database Check**: First searches the local database for the ISBN
+2. **External API Query**: If not found locally, queries OpenLibrary API
+3. **Auto-Save**: If found externally, the book is automatically saved to the local database
+4. **Response Status**: Returns `200 OK` for existing books, `201 Created` for newly added books from OpenLibrary
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Book found in the local database.
+</ResponseField>
+
+<ResponseField name="201" type="Created">
+  Book found in OpenLibrary API and successfully added to the local database.
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid JWT token.
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  Valid token but insufficient permissions.
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Book with the specified ISBN was not found in either the local database or OpenLibrary API.
+</ResponseField>

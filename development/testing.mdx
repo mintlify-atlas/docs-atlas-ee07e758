@@ -1,0 +1,528 @@
+---
+title: Testing Strategy
+description: Comprehensive guide to testing, code coverage, and quality assurance in the Library Management API
+---
+
+## Testing Overview
+
+The Library Management API implements a comprehensive testing strategy with **21 test classes** covering all layers of the application:
+
+<CardGroup cols={3}>
+  <Card title="Unit Tests" icon="flask">
+    19 test classes for isolated component testing
+  </Card>
+  <Card title="Integration Tests" icon="network-wired">
+    Controller tests with MockMvc
+  </Card>
+  <Card title="Code Coverage" icon="chart-line">
+    80% minimum coverage enforced by JaCoCo
+  </Card>
+</CardGroup>
+
+## Test Structure
+
+Tests are organized by application layer, mirroring the main source structure:
+
+```
+src/test/java/com/raven/training/
+├── TrainingApplicationTests.java          # Application context test
+├── config/
+│   └── filter/
+│       └── JwtTokenValidatorTest.java     # JWT filter tests
+├── exception/
+│   ├── error/
+│   │   ├── BookNotFoundExceptionTest.java
+│   │   └── UserNotFoundExceptionTest.java
+│   └── handler/
+│       └── GlobalExceptionHandlerTest.java
+├── mapper/
+│   ├── IBookMapperImplTest.java           # Book mapper tests
+│   └── IUserMapperTest.java               # User mapper tests
+├── persistence/
+│   ├── entity/
+│   │   ├── AuthUserTest.java
+│   │   ├── BookTest.java
+│   │   └── UserTest.java
+│   └── model/
+│       └── ErrorResponseTest.java
+├── presentation/
+│   ├── controller/
+│   │   ├── AuthUserControllerTest.java    # Auth endpoints
+│   │   ├── BookControllerTest.java        # Book endpoints
+│   │   └── UserControllerTest.java        # User endpoints
+│   └── dto/
+│       └── bookexternal/
+│           └── OpenLibraryBookDTOTest.java
+├── service/
+│   └── impl/
+│       ├── BookServiceImplTest.java       # Book business logic
+│       ├── OpenLibraryServiceImplTest.java
+│       ├── UserDetailServiceImplTest.java
+│       └── UserServiceImplTest.java       # User business logic
+└── util/
+    ├── JwtUtilsTest.java                  # JWT utilities
+    └── deserializer/
+        └── IdentifierDeserializerTest.java
+```
+
+## Running Tests
+
+### Run All Tests
+
+Execute the complete test suite:
+
+<Tabs>
+  <Tab title="Maven Wrapper">
+    ```bash
+    ./mvnw test
+    ```
+  </Tab>
+  <Tab title="System Maven">
+    ```bash
+    mvn test
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```bash
+    mvnw.cmd test
+    ```
+  </Tab>
+</Tabs>
+
+### Run Specific Test Classes
+
+Run a single test class:
+
+```bash
+mvn test -Dtest=BookServiceImplTest
+```
+
+Run multiple test classes:
+
+```bash
+mvn test -Dtest=BookServiceImplTest,UserServiceImplTest
+```
+
+### Run Tests by Category
+
+Run all controller tests:
+
+```bash
+mvn test -Dtest="*Controller*"
+```
+
+Run all service tests:
+
+```bash
+mvn test -Dtest="*ServiceImpl*"
+```
+
+### Run Tests with Coverage
+
+Generate code coverage report:
+
+```bash
+mvn clean test jacoco:report
+```
+
+The coverage report will be generated at:
+```
+target/site/jacoco/index.html
+```
+
+## Testing Framework
+
+### Core Dependencies
+
+The project uses the following testing libraries:
+
+| Library | Purpose |
+|---------|----------|
+| JUnit 5 | Test framework |
+| Mockito | Mocking framework |
+| MockMvc | Spring MVC testing |
+| Spring Boot Test | Integration testing support |
+| Spring Security Test | Security testing utilities |
+| Spring REST Docs | API documentation from tests |
+
+### Test Annotations
+
+Common annotations used in tests:
+
+```java
+@ExtendWith(MockitoExtension.class)  // Enable Mockito
+@DisplayName("Description")           // Test description
+@Test                                 // Mark as test method
+@BeforeEach                           // Setup before each test
+@Mock                                 // Create mock instance
+@InjectMocks                          // Inject mocks into tested object
+```
+
+## Unit Testing Examples
+
+### Service Layer Tests
+
+Example from `BookServiceImplTest.java`:
+
+```java
+@ExtendWith(MockitoExtension.class)
+@DisplayName("Unit tests for BookServiceImpl")
+class BookServiceImplTest {
+
+    @Mock
+    private IBookRepository bookRepository;
+
+    @Mock
+    private IBookMapper bookMapper;
+
+    @InjectMocks
+    private BookServiceImpl bookService;
+
+    private Book book;
+    private BookResponse bookResponse;
+    private UUID bookId;
+
+    @BeforeEach
+    void setUp() {
+        bookId = UUID.randomUUID();
+        book = Book.builder()
+                .id(bookId)
+                .title("Clean Code")
+                .author("Robert C. Martin")
+                .build();
+
+        bookResponse = new BookResponse(
+                bookId,
+                "Programming",
+                "Robert C. Martin",
+                "clean-code.jpg",
+                "Clean Code",
+                "A Handbook of Agile Software Craftsmanship",
+                "Prentice Hall",
+                "2008",
+                464,
+                "9780132350884"
+        );
+    }
+
+    @Test
+    @DisplayName("Should return a book when it exists with the provided ID")
+    void findById_WhenBookExists_ShouldReturnBook() {
+        when(bookRepository.findById(bookId)).thenReturn(Optional.of(book));
+        when(bookMapper.toResponse(book)).thenReturn(bookResponse);
+
+        BookResponse result = bookService.findById(bookId);
+
+        assertNotNull(result);
+        assertEquals(bookId, result.id());
+        verify(bookRepository, times(1)).findById(bookId);
+        verify(bookMapper, times(1)).toResponse(book);
+    }
+
+    @Test
+    @DisplayName("Should throw BookNotFoundException when the book does not exist")
+    void findById_WhenBookNotExists_ShouldThrowException() {
+        when(bookRepository.findById(bookId)).thenReturn(Optional.empty());
+
+        assertThrows(BookNotFoundException.class, 
+            () -> bookService.findById(bookId));
+        verify(bookRepository, times(1)).findById(bookId);
+    }
+}
+```
+
+### Controller Layer Tests
+
+Example from `BookControllerTest.java`:
+
+```java
+@ExtendWith(MockitoExtension.class)
+@DisplayName("Unit tests for BookController")
+class BookControllerTest {
+
+    @Mock
+    private IBookService bookService;
+
+    @Mock
+    private OpenLibraryService openLibraryService;
+
+    @InjectMocks
+    private BookController bookController;
+
+    @Test
+    @DisplayName("Should return a page of book responses")
+    void findAll_NoFilters_ShouldReturnPageOfBookResponses() {
+        // Arrange
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("id").ascending());
+        Page<BookResponse> expectedPage = new PageImpl<>(bookResponses, pageable, 2);
+        when(bookService.findAll(null, null, null, pageable)).thenReturn(expectedPage);
+
+        // Act
+        ResponseEntity<CustomPageableResponse<BookResponse>> response = 
+            bookController.findAll(0, 10, null, null, null);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(2, response.getBody().page().size());
+        verify(bookService, times(1)).findAll(null, null, null, pageable);
+    }
+}
+```
+
+## Code Coverage with JaCoCo
+
+### Configuration
+
+JaCoCo is configured in `pom.xml` with the following settings:
+
+```xml
+<plugin>
+    <groupId>org.jacoco</groupId>
+    <artifactId>jacoco-maven-plugin</artifactId>
+    <version>0.8.13</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>prepare-agent</goal>
+            </goals>
+        </execution>
+        <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+                <goal>report</goal>
+            </goals>
+        </execution>
+        <execution>
+            <id>jacoco-check</id>
+            <goals>
+                <goal>check</goal>
+            </goals>
+            <configuration>
+                <rules>
+                    <rule>
+                        <element>PACKAGE</element>
+                        <limits>
+                            <limit>
+                                <counter>LINE</counter>
+                                <value>COVEREDRATIO</value>
+                                <minimum>0.80</minimum>
+                            </limit>
+                        </limits>
+                    </rule>
+                </rules>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+### Coverage Requirements
+
+<Warning>
+  **Minimum Coverage: 80%**
+  
+  The build will **fail** if any package has less than 80% line coverage. This ensures high code quality and test completeness.
+</Warning>
+
+### Generate Coverage Report
+
+<Steps>
+  <Step title="Run tests with coverage">
+    ```bash
+    mvn clean test
+    ```
+  </Step>
+  <Step title="Generate HTML report">
+    ```bash
+    mvn jacoco:report
+    ```
+  </Step>
+  <Step title="Open the report">
+    Open `target/site/jacoco/index.html` in your browser
+  </Step>
+</Steps>
+
+### Coverage Report Structure
+
+The JaCoCo report shows coverage metrics for:
+
+- **Instructions**: Individual bytecode instructions
+- **Branches**: Decision points (if/else, switch, etc.)
+- **Lines**: Source code lines
+- **Methods**: Individual methods
+- **Classes**: Complete classes
+
+### Verify Coverage Threshold
+
+Check if coverage meets the 80% requirement:
+
+```bash
+mvn clean verify
+```
+
+If coverage is below 80%, the build will fail with:
+```
+[ERROR] Rule violated for package com.raven.training: 
+lines covered ratio is 0.75, but expected minimum is 0.80
+```
+
+## Testing Best Practices
+
+### Naming Conventions
+
+Follow this naming pattern for test methods:
+
+```
+[methodName]_[scenario]_[expectedBehavior]
+```
+
+Examples:
+- `findById_WhenBookExists_ShouldReturnBook`
+- `findById_WhenBookNotExists_ShouldThrowException`
+- `findAll_WithTitleFilter_ShouldReturnPageOfBookResponses`
+
+### Test Structure (AAA Pattern)
+
+```java
+@Test
+void testMethod() {
+    // Arrange - Set up test data and mocks
+    when(repository.findById(id)).thenReturn(Optional.of(entity));
+    
+    // Act - Execute the method being tested
+    Result result = service.findById(id);
+    
+    // Assert - Verify the results
+    assertNotNull(result);
+    assertEquals(expected, result);
+    verify(repository, times(1)).findById(id);
+}
+```
+
+### What to Test
+
+<CardGroup cols={2}>
+  <Card title="Happy Paths" icon="check">
+    Test successful scenarios with valid inputs
+  </Card>
+  <Card title="Edge Cases" icon="triangle-exclamation">
+    Test boundary conditions and edge cases
+  </Card>
+  <Card title="Error Handling" icon="xmark">
+    Test exception scenarios and error cases
+  </Card>
+  <Card title="Business Logic" icon="brain">
+    Test all business rules and validations
+  </Card>
+</CardGroup>
+
+### Mocking Guidelines
+
+- **Mock external dependencies**: Repositories, external services, APIs
+- **Don't mock value objects**: DTOs, entities, simple POJOs
+- **Verify interactions**: Use `verify()` to ensure methods are called correctly
+- **Use argument matchers**: `any()`, `eq()`, `argThat()` for flexible matching
+
+## Integration Testing
+
+### Controller Integration Tests
+
+Controller tests use MockMvc for integration testing:
+
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+class BookControllerIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    void shouldReturnBooks() throws Exception {
+        mockMvc.perform(get("/api/v1/books/findAll")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").isArray());
+    }
+}
+```
+
+## Continuous Integration
+
+### Pre-commit Checks
+
+Before committing, run:
+
+```bash
+mvn clean verify
+```
+
+This executes:
+1. All unit tests
+2. All integration tests
+3. Code coverage analysis
+4. Coverage threshold validation
+
+### CI Pipeline Recommendations
+
+<Steps>
+  <Step title="Clean build">
+    ```bash
+    mvn clean compile
+    ```
+  </Step>
+  <Step title="Run tests">
+    ```bash
+    mvn test
+    ```
+  </Step>
+  <Step title="Generate coverage">
+    ```bash
+    mvn jacoco:report
+    ```
+  </Step>
+  <Step title="Verify quality gates">
+    ```bash
+    mvn jacoco:check
+    ```
+  </Step>
+  <Step title="Package application">
+    ```bash
+    mvn package
+    ```
+  </Step>
+</Steps>
+
+## Testing Tools & Commands
+
+### Quick Reference
+
+| Command | Description |
+|---------|-------------|
+| `mvn test` | Run all tests |
+| `mvn test -Dtest=ClassName` | Run specific test class |
+| `mvn test -Dtest=ClassName#methodName` | Run specific test method |
+| `mvn clean test` | Clean and run tests |
+| `mvn verify` | Run tests and validate coverage |
+| `mvn jacoco:report` | Generate coverage report |
+| `mvn test -DskipTests` | Skip test execution |
+| `mvn test -Dmaven.test.failure.ignore=true` | Continue on test failures |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Understand the application architecture
+  </Card>
+  <Card title="Setup Guide" icon="wrench" href="/development/setup">
+    Configure your development environment
+  </Card>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Learn how to add new API endpoints
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture/overview">
+    Understand the architecture and error handling
+  </Card>
+</CardGroup>

@@ -1,0 +1,402 @@
+---
+title: "Security Configuration"
+description: "Configure JWT authentication, security filters, and authorization rules for the Library Management API"
+---
+
+## Overview
+
+The Library Management API implements JWT (JSON Web Token) based authentication with Spring Security. This guide covers security configuration, JWT setup, and authorization rules.
+
+## Security Architecture
+
+The security system consists of three main components:
+
+1. **SecurityConfig** - Defines security filter chain and authentication providers
+2. **JwtTokenValidator** - Custom filter that validates JWT tokens
+3. **JwtUtils** - Utility for creating and validating JWT tokens
+
+## JWT Configuration Properties
+
+### Required Properties
+
+<Warning>
+  JWT properties must be configured via environment variables. Never commit these values to version control.
+</Warning>
+
+| Property | Environment Variable | Description | Example |
+|----------|---------------------|-------------|-------|
+| `security.jwt.user.generator` | `user_jwt` | JWT issuer identifier | `library-api` |
+| `security.jwt.key.private` | `key_jwt` | Secret key for signing tokens | `your-256-bit-secret-key` |
+
+### Configuration in application.properties
+
+```properties
+security.jwt.user.generator=${user_jwt}
+security.jwt.key.private=${key_jwt}
+```
+
+Defined in: `/workspace/source/src/main/resources/application.properties:17-18`
+
+### Setting Environment Variables
+
+<CodeGroup>
+```bash Linux/macOS
+export user_jwt="library-management-api"
+export key_jwt="your-secure-256-bit-secret-key-here-change-in-production"
+```
+
+```bash Windows (CMD)
+set user_jwt=library-management-api
+set key_jwt=your-secure-256-bit-secret-key-here-change-in-production
+```
+
+```bash Windows (PowerShell)
+$env:user_jwt="library-management-api"
+$env:key_jwt="your-secure-256-bit-secret-key-here-change-in-production"
+```
+
+```bash Docker Compose
+environment:
+  - user_jwt=library-management-api
+  - key_jwt=${JWT_SECRET_KEY}
+```
+</CodeGroup>
+
+<Note>
+  The JWT secret key should be at least 256 bits (32 characters) for HMAC256 algorithm security.
+</Note>
+
+## Security Filter Chain
+
+The `SecurityConfig` class defines the security filter chain that processes all HTTP requests.
+
+Defined in: `/workspace/source/src/main/java/com/raven/training/config/security/SecurityConfig.java`
+
+### Filter Chain Configuration
+
+The security filter chain implements the following rules:
+
+<Steps>
+  <Step title="Disable CSRF Protection">
+    Cross-Site Request Forgery protection is disabled for stateless JWT authentication:
+    ```java
+    .csrf(csrf -> csrf.disable())
+    ```
+  </Step>
+
+  <Step title="Enable HTTP Basic Authentication">
+    HTTP Basic authentication is enabled as a fallback mechanism:
+    ```java
+    .httpBasic(Customizer.withDefaults())
+    ```
+  </Step>
+
+  <Step title="Configure Stateless Sessions">
+    Session management is set to STATELESS for JWT-based authentication:
+    ```java
+    .sessionManagement(session -> 
+      session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+    )
+    ```
+  </Step>
+
+  <Step title="Define Authorization Rules">
+    Public and protected endpoints are configured (see [Authorization Rules](#authorization-rules) below)
+  </Step>
+
+  <Step title="Add JWT Validation Filter">
+    Custom JWT token validator is added before basic authentication:
+    ```java
+    .addFilterBefore(new JwtTokenValidator(jwtUtils), 
+      BasicAuthenticationFilter.class)
+    ```
+  </Step>
+</Steps>
+
+## Authorization Rules
+
+### Public Endpoints (No Authentication Required)
+
+The following endpoints are accessible without authentication:
+
+<CardGroup cols={2}>
+  <Card title="Swagger UI Documentation" icon="book">
+    - `/swagger-ui/**`
+    - `/swagger-ui.html`
+    - `/v3/api-docs/**`
+    - `/swagger-resources/**`
+    - `/webjars/**`
+  </Card>
+
+  <Card title="Authentication Endpoints" icon="key">
+    - `POST /api/v1/auth/**`
+    
+    Includes login, registration, and token refresh endpoints.
+  </Card>
+</CardGroup>
+
+Configured in: `SecurityConfig.java:64-73`
+
+### Protected Endpoints
+
+All other endpoints require authentication:
+
+```java
+http.anyRequest().authenticated();
+```
+
+Requests to protected endpoints must include a valid JWT token in the `Authorization` header.
+
+## JWT Token Management
+
+### Token Structure
+
+JWT tokens created by the API include the following claims:
+
+| Claim | Description | Example |
+|-------|-------------|-------|
+| `iss` (Issuer) | Token issuer from `security.jwt.user.generator` | `library-management-api` |
+| `sub` (Subject) | Username of the authenticated user | `john.doe` |
+| `authorities` | User roles/authorities (comma-separated) | `ROLE_USER,ROLE_ADMIN` |
+| `iat` (Issued At) | Token creation timestamp | `1709740800` |
+| `exp` (Expiration) | Token expiration timestamp | `1709742600` |
+| `jti` (JWT ID) | Unique token identifier (UUID) | `550e8400-e29b-41d4-a716-446655440000` |
+| `nbf` (Not Before) | Timestamp before which token is invalid | `1709740800` |
+
+### Token Expiration
+
+Tokens are valid for **30 minutes (1,800,000 milliseconds)** from creation:
+
+```java
+.withExpiresAt(new Date(System.currentTimeMillis() + 1800000))
+```
+
+Defined in: `JwtUtils.java:59`
+
+<Tip>
+  To customize token expiration, modify the hardcoded value in `JwtUtils.createToken()` or extract it to a configuration property.
+</Tip>
+
+### Token Validation Process
+
+The `JwtTokenValidator` filter validates tokens on every request:
+
+<Steps>
+  <Step title="Extract Token from Header">
+    Extracts the JWT from the `Authorization` header:
+    ```
+    Authorization: Bearer <token>
+    ```
+  </Step>
+
+  <Step title="Validate Token Signature">
+    Verifies the token using HMAC256 algorithm with the configured secret key.
+  </Step>
+
+  <Step title="Verify Claims">
+    Checks:
+    - Token issuer matches `security.jwt.user.generator`
+    - Token has not expired
+    - Current time is after `nbf` (Not Before) claim
+  </Step>
+
+  <Step title="Set Security Context">
+    Extracts username and creates authentication object in Spring Security context.
+  </Step>
+</Steps>
+
+Implementation: `JwtTokenValidator.java:57-76`
+
+## Authentication Components
+
+### Authentication Manager
+
+Provides the core authentication functionality:
+
+```java
+@Bean
+public AuthenticationManager authenticationManager(
+    AuthenticationConfiguration authenticationConfiguration
+) throws Exception {
+    return authenticationConfiguration.getAuthenticationManager();
+}
+```
+
+Defined in: `SecurityConfig.java:90-93`
+
+### Authentication Provider
+
+Configures DAO-based authentication with custom user details service:
+
+```java
+@Bean
+public AuthenticationProvider authenticationProvider(
+    UserDetailServiceImpl userDetailService
+) {
+    DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+    provider.setUserDetailsService(userDetailService);
+    provider.setPasswordEncoder(passwordEncoder());
+    return provider;
+}
+```
+
+Defined in: `SecurityConfig.java:103-109`
+
+### Password Encoder
+
+Uses BCrypt for password hashing:
+
+```java
+@Bean
+public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+}
+```
+
+Defined in: `SecurityConfig.java:117-120`
+
+<Note>
+  BCrypt automatically handles salt generation and is resistant to rainbow table attacks.
+</Note>
+
+## Using JWT Tokens
+
+### Obtaining a Token
+
+Authenticate via the login endpoint:
+
+```bash
+curl -X POST http://localhost:8081/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "john.doe",
+    "password": "password123"
+  }'
+```
+
+Response:
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresIn": 1800000
+}
+```
+
+### Making Authenticated Requests
+
+Include the token in the `Authorization` header:
+
+```bash
+curl -X GET http://localhost:8081/api/v1/books \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Strong Secret Keys" icon="shield">
+    - Use at least 256-bit random keys
+    - Rotate keys periodically
+    - Store in secure secret management systems
+  </Card>
+
+  <Card title="HTTPS Only" icon="lock">
+    - Always use HTTPS in production
+    - JWT tokens in HTTP headers are visible to attackers
+    - Configure SSL/TLS termination
+  </Card>
+
+  <Card title="Token Expiration" icon="clock">
+    - Keep token lifetimes short (current: 30 minutes)
+    - Implement refresh token mechanism
+    - Invalidate tokens on logout
+  </Card>
+
+  <Card title="Secure Storage" icon="database">
+    - Never store tokens in localStorage
+    - Use httpOnly cookies when possible
+    - Clear tokens on client-side logout
+  </Card>
+</CardGroup>
+
+## Production Configuration
+
+### Environment-Specific Settings
+
+<CodeGroup>
+```properties Development
+# Use a simple key for development
+security.jwt.user.generator=${user_jwt:dev-library-api}
+security.jwt.key.private=${key_jwt:dev-secret-key-change-me}
+```
+
+```properties Production
+# Require environment variables in production
+security.jwt.user.generator=${user_jwt}
+security.jwt.key.private=${key_jwt}
+
+# These will fail if not set, preventing insecure defaults
+```
+</CodeGroup>
+
+### Additional Security Headers
+
+Consider adding security headers configuration:
+
+```java
+.headers(headers -> headers
+    .frameOptions(frame -> frame.deny())
+    .xssProtection(xss -> xss.enable())
+    .contentTypeOptions(Customizer.withDefaults())
+)
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="401 Unauthorized - Invalid Token">
+    **Causes**:
+    - Token has expired (30-minute lifetime)
+    - Invalid signature (wrong secret key)
+    - Token issuer doesn't match configuration
+    
+    **Solutions**:
+    - Verify `security.jwt.key.private` matches between environments
+    - Check token expiration timestamp
+    - Obtain a new token via login endpoint
+  </Accordion>
+
+  <Accordion title="403 Forbidden - Access Denied">
+    **Causes**:
+    - Valid token but insufficient permissions
+    - Endpoint requires specific roles
+    
+    **Solutions**:
+    - Check user authorities in token claims
+    - Verify endpoint authorization requirements
+  </Accordion>
+
+  <Accordion title="Missing Authorization Header">
+    **Error**: Request rejected without token
+    
+    **Solutions**:
+    - Ensure header format: `Authorization: Bearer <token>`
+    - Check for typos in header name
+    - Verify token is included in request
+  </Accordion>
+
+  <Accordion title="CORS Issues">
+    **Error**: CORS policy blocking requests
+    
+    **Solutions**:
+    - Add CORS configuration to SecurityConfig
+    - Allow `Authorization` header in CORS settings
+    - Configure allowed origins properly
+  </Accordion>
+</AccordionGroup>
+
+## Related Configuration
+
+- [Database Configuration](/configuration/database) - Database connection setup
+- [Application Properties](/configuration/application-properties) - Complete properties reference
+- [Authentication Endpoints](/api/auth/register) - API endpoints for login/registration

@@ -1,0 +1,113 @@
+---
+title: "Get Book by ID"
+api: "GET /api/v1/books/findById/{id}"
+description: "Retrieves a single book by its unique identifier (UUID)."
+---
+
+## Authentication
+
+This endpoint requires a valid JWT token in the Authorization header.
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Path Parameters
+
+<ParamField path="id" type="string" format="uuid" required>
+  The unique identifier (UUID) of the book to retrieve.
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string" format="uuid">
+  Unique identifier of the book.
+</ResponseField>
+
+<ResponseField name="gender" type="string">
+  The genre or category of the book.
+</ResponseField>
+
+<ResponseField name="author" type="string">
+  The author's name.
+</ResponseField>
+
+<ResponseField name="image" type="string">
+  URL or path to the book's cover image.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The main title of the book.
+</ResponseField>
+
+<ResponseField name="subtitle" type="string">
+  The subtitle of the book.
+</ResponseField>
+
+<ResponseField name="publisher" type="string">
+  The name of the publisher.
+</ResponseField>
+
+<ResponseField name="year" type="string">
+  The publication year of the book.
+</ResponseField>
+
+<ResponseField name="pages" type="integer">
+  The number of pages in the book.
+</ResponseField>
+
+<ResponseField name="isbn" type="string">
+  The International Standard Book Number (ISBN).
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.example.com/api/v1/books/findById/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 OK
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "gender": "Fantasy",
+  "author": "J.R.R. Tolkien",
+  "image": "https://example.com/covers/lotr.jpg",
+  "title": "The Lord of the Rings",
+  "subtitle": "The Fellowship of the Ring",
+  "publisher": "Allen & Unwin",
+  "year": "1954",
+  "pages": 423,
+  "isbn": "978-0-618-00222-1"
+}
+```
+
+```json 404 Not Found
+{
+  "timestamp": "2026-03-06T10:30:00.000+00:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Book not found with id: 550e8400-e29b-41d4-a716-446655440000",
+  "path": "/api/v1/books/findById/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="200" type="OK">
+  Book retrieved successfully.
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid JWT token.
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  Valid token but insufficient permissions.
+</ResponseField>
+
+<ResponseField name="404" type="Not Found">
+  Book with the specified ID does not exist.
+</ResponseField>

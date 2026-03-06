@@ -1,0 +1,177 @@
+---
+title: 'User Models'
+description: 'User entity and data transfer objects for user operations'
+---
+
+## User Entity
+
+The User entity represents a library system user. Users can have a collection of books through a many-to-many relationship.
+
+### User Fields
+
+<ResponseField name="id" type="UUID" required>
+  Unique identifier for the user. Automatically generated using `@PrePersist` if not provided.
+</ResponseField>
+
+<ResponseField name="userName" type="string">
+  The username for the user's account.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The full name of the user.
+</ResponseField>
+
+<ResponseField name="birthDate" type="date">
+  The date of birth of the user in ISO 8601 format (YYYY-MM-DD).
+</ResponseField>
+
+<ResponseField name="books" type="array">
+  A list of books associated with the user. This is a many-to-many relationship managed by the `user_books` join table.
+  
+  <Expandable title="Book object">
+    <ResponseField name="id" type="UUID">
+      Unique identifier of the book
+    </ResponseField>
+    <ResponseField name="gender" type="string">
+      Genre of the book
+    </ResponseField>
+    <ResponseField name="author" type="string">
+      Author's name
+    </ResponseField>
+    <ResponseField name="image" type="string">
+      URL to book cover image
+    </ResponseField>
+    <ResponseField name="title" type="string">
+      Main title of the book
+    </ResponseField>
+    <ResponseField name="subtitle" type="string">
+      Subtitle of the book
+    </ResponseField>
+    <ResponseField name="publisher" type="string">
+      Publisher name
+    </ResponseField>
+    <ResponseField name="year" type="string">
+      Publication year
+    </ResponseField>
+    <ResponseField name="pages" type="integer">
+      Number of pages
+    </ResponseField>
+    <ResponseField name="isbn" type="string">
+      International Standard Book Number
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### UUID Generation
+
+The User entity uses the `@PrePersist` callback to automatically generate a UUID for the `id` field if one is not already set:
+
+```java
+@PrePersist
+public void prePersist() {
+    if (id == null) {
+        id = UUID.randomUUID();
+    }
+}
+```
+
+### Relationships
+
+- **Many-to-Many with Book**: Users can have multiple books in their collection, and books can belong to multiple users. The relationship is managed by the `user_books` join table with the following structure:
+  - `user_id`: Foreign key to the User entity
+  - `book_id`: Foreign key to the Book entity
+
+The relationship is configured with `EAGER` fetch type and supports `PERSIST` and `MERGE` cascade operations.
+
+---
+
+## UserRequest
+
+Data Transfer Object used for creating or updating a user.
+
+### Request Fields
+
+<ResponseField name="userName" type="string">
+  The username for the user's account.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The full name of the user.
+</ResponseField>
+
+<ResponseField name="birthDate" type="date">
+  The date of birth of the user in ISO 8601 format (YYYY-MM-DD).
+</ResponseField>
+
+<ResponseField name="bookIds" type="array">
+  A list of UUIDs representing the books to be associated with the user.
+  
+  <Expandable title="UUID format">
+    <ResponseField name="bookId" type="UUID">
+      Format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Request
+
+```json
+{
+  "userName": "johndoe",
+  "name": "John Doe",
+  "birthDate": "1990-05-15",
+  "bookIds": [
+    "550e8400-e29b-41d4-a716-446655440000",
+    "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+  ]
+}
+```
+
+---
+
+## UserResponse
+
+Data Transfer Object returned when retrieving user information.
+
+### Response Fields
+
+<ResponseField name="id" type="UUID" required>
+  Unique identifier of the user.
+</ResponseField>
+
+<ResponseField name="userName" type="string">
+  The username for the user's account.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The full name of the user.
+</ResponseField>
+
+<ResponseField name="birthDate" type="date">
+  The date of birth of the user in ISO 8601 format (YYYY-MM-DD).
+</ResponseField>
+
+<ResponseField name="bookIds" type="array">
+  A list of UUIDs representing the books associated with the user.
+  
+  <Expandable title="UUID format">
+    <ResponseField name="bookId" type="UUID">
+      Format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "userName": "johndoe",
+  "name": "John Doe",
+  "birthDate": "1990-05-15",
+  "bookIds": [
+    "550e8400-e29b-41d4-a716-446655440000",
+    "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+  ]
+}
+```

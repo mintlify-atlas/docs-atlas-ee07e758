@@ -1,0 +1,216 @@
+---
+title: 'API Introduction'
+description: 'Get started with the Library Management API'
+icon: 'book-open'
+---
+
+## Welcome to the Library Management API
+
+The Library Management API is a comprehensive REST API for managing books, users, and their collections. Built with Spring Boot, this API provides secure endpoints for creating, reading, updating, and deleting resources.
+
+<CardGroup cols={2}>
+  <Card title="Base URL" icon="server">
+    ```
+    http://localhost:8081
+    ```
+    Development server for local testing
+  </Card>
+  <Card title="API Version" icon="code-branch">
+    ```
+    /api/v1
+    ```
+    All endpoints are versioned under v1
+  </Card>
+</CardGroup>
+
+## API Overview
+
+The API provides three main endpoint categories:
+
+<CardGroup cols={3}>
+  <Card title="Authentication" icon="lock" href="/api/auth">
+    User registration and login endpoints
+  </Card>
+  <Card title="Books" icon="book" href="/api/books">
+    Complete CRUD operations for book management
+  </Card>
+  <Card title="Users" icon="users" href="/api/users">
+    User management and book collection operations
+  </Card>
+</CardGroup>
+
+## API Versioning
+
+All API endpoints are versioned to ensure backward compatibility. The current version is **v1**, and all endpoints are prefixed with `/api/v1`.
+
+<Info>
+  **Endpoint Structure**: `http://localhost:8081/api/v1/{resource}`
+  
+  Example: `http://localhost:8081/api/v1/books/findAll`
+</Info>
+
+## HTTP Methods
+
+The API follows RESTful conventions and uses standard HTTP methods:
+
+| Method | Usage | Description |
+|--------|-------|-------------|
+| **GET** | Read operations | Retrieve resources or lists of resources |
+| **POST** | Create operations | Create new resources or perform authentication |
+| **PUT** | Update operations | Update existing resources |
+| **DELETE** | Delete operations | Remove resources from the system |
+
+## Authentication
+
+The API uses **JWT (JSON Web Token)** authentication to secure endpoints. Most endpoints require a valid JWT token in the request header.
+
+### Authentication Flow
+
+1. **Register**: Create a new user account via `/api/v1/auth/register`
+2. **Login**: Authenticate and receive a JWT token via `/api/v1/auth/login`
+3. **Use Token**: Include the token in subsequent requests
+
+### Token Format
+
+Include the JWT token in the `Authorization` header using the Bearer scheme:
+
+```http
+Authorization: Bearer <your-jwt-token>
+```
+
+<Note>
+  The token is returned in the response after successful login or registration.
+</Note>
+
+### Public Endpoints
+
+The following endpoints do **NOT** require authentication:
+
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/register` - User registration
+- All Swagger UI endpoints (`/swagger-ui/**`, `/v3/api-docs/**`)
+
+### Protected Endpoints
+
+All other endpoints require a valid JWT token in the Authorization header:
+
+- All `/api/v1/books/**` endpoints (except public ones)
+- All `/api/v1/users/**` endpoints
+
+<Info>
+  **Security Scheme**: HTTP Bearer authentication with JWT format
+  
+  **Header**: Authorization
+  
+  **Scheme**: bearer
+</Info>
+
+## Response Formats
+
+### Success Responses
+
+Successful requests return JSON responses with appropriate HTTP status codes:
+
+- **200 OK**: Successful GET, PUT, or DELETE operation
+- **201 Created**: Successful POST operation (resource created)
+
+### Error Responses
+
+Error responses include detailed information about what went wrong:
+
+```json
+{
+  "timestamp": "2025-08-05T10:30:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Book not found with id: 123e4567-e89b-12d3-a456-426614174000",
+  "path": "/api/v1/books/findById/123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+### Common HTTP Status Codes
+
+| Code | Meaning | Description |
+|------|---------|-------------|
+| 200 | OK | Request succeeded |
+| 201 | Created | Resource successfully created |
+| 400 | Bad Request | Invalid request parameters or body |
+| 401 | Unauthorized | Missing or invalid authentication token |
+| 404 | Not Found | Requested resource not found |
+| 409 | Conflict | Resource already exists (e.g., duplicate email) |
+| 500 | Internal Server Error | Server-side error occurred |
+
+## Pagination
+
+List endpoints (`findAll`) support pagination with the following query parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | integer | 0 | Page number (0-indexed) |
+| `size` | integer | 10 | Number of items per page |
+
+### Pagination Response Format
+
+```json
+{
+  "content": [...],
+  "numberOfElements": 10,
+  "size": 10,
+  "offset": 0,
+  "totalPages": 5,
+  "totalElements": 50,
+  "previousPage": null,
+  "currentPage": 1,
+  "nextPage": 2
+}
+```
+
+<Note>
+  Pages are **0-indexed** in the API but displayed as 1-indexed in the response.
+</Note>
+
+## Data Format
+
+### UUID Identifiers
+
+All resources use **UUID** (Universally Unique Identifier) format for IDs:
+
+```
+123e4567-e89b-12d3-a456-426614174000
+```
+
+### Date/Time Format
+
+All timestamps follow the ISO 8601 format:
+
+```
+2025-08-05T10:30:00Z
+```
+
+## Environment Configuration
+
+The API supports multiple deployment environments:
+
+<CardGroup cols={2}>
+  <Card title="Development Server" icon="laptop-code">
+    **URL**: `http://localhost:8081`
+    
+    For local development and testing
+  </Card>
+  <Card title="Production Server" icon="server">
+    **URL**: `http://books:8081`
+    
+    For production deployment
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Try Swagger UI" icon="flask" href="/api/swagger">
+    Interactive API documentation and testing
+  </Card>
+  <Card title="Authentication Guide" icon="key" href="/api/auth">
+    Learn how to authenticate with the API
+  </Card>
+</CardGroup>

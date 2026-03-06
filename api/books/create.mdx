@@ -1,0 +1,194 @@
+---
+title: "Create Book"
+api: "POST /api/v1/books/create"
+description: "Creates a new book in the library system."
+---
+
+## Authentication
+
+This endpoint requires a valid JWT token in the Authorization header.
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Request Body
+
+<ParamField body="gender" type="string" required>
+  The genre or category of the book (e.g., "Fantasy", "Science Fiction", "Mystery").
+</ParamField>
+
+<ParamField body="author" type="string" required>
+  The author's name.
+</ParamField>
+
+<ParamField body="image" type="string" required>
+  URL or path to the book's cover image.
+</ParamField>
+
+<ParamField body="title" type="string" required>
+  The main title of the book.
+</ParamField>
+
+<ParamField body="subtitle" type="string" optional>
+  The subtitle of the book.
+</ParamField>
+
+<ParamField body="publisher" type="string" required>
+  The name of the publisher.
+</ParamField>
+
+<ParamField body="year" type="string" required>
+  The publication year of the book.
+</ParamField>
+
+<ParamField body="pages" type="integer" required>
+  The number of pages in the book.
+</ParamField>
+
+<ParamField body="isbn" type="string" required>
+  The International Standard Book Number (ISBN). Must be unique in the system.
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string" format="uuid">
+  Unique identifier of the newly created book.
+</ResponseField>
+
+<ResponseField name="gender" type="string">
+  The genre or category of the book.
+</ResponseField>
+
+<ResponseField name="author" type="string">
+  The author's name.
+</ResponseField>
+
+<ResponseField name="image" type="string">
+  URL or path to the book's cover image.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  The main title of the book.
+</ResponseField>
+
+<ResponseField name="subtitle" type="string">
+  The subtitle of the book.
+</ResponseField>
+
+<ResponseField name="publisher" type="string">
+  The name of the publisher.
+</ResponseField>
+
+<ResponseField name="year" type="string">
+  The publication year of the book.
+</ResponseField>
+
+<ResponseField name="pages" type="integer">
+  The number of pages in the book.
+</ResponseField>
+
+<ResponseField name="isbn" type="string">
+  The International Standard Book Number (ISBN).
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "https://api.example.com/api/v1/books/create" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "gender": "Fantasy",
+    "author": "J.R.R. Tolkien",
+    "image": "https://example.com/covers/lotr.jpg",
+    "title": "The Lord of the Rings",
+    "subtitle": "The Fellowship of the Ring",
+    "publisher": "Allen & Unwin",
+    "year": "1954",
+    "pages": 423,
+    "isbn": "978-0-618-00222-1"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.example.com/api/v1/books/create', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    gender: 'Fantasy',
+    author: 'J.R.R. Tolkien',
+    image: 'https://example.com/covers/lotr.jpg',
+    title: 'The Lord of the Rings',
+    subtitle: 'The Fellowship of the Ring',
+    publisher: 'Allen & Unwin',
+    year: '1954',
+    pages: 423,
+    isbn: '978-0-618-00222-1'
+  })
+});
+
+const book = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json 201 Created
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "gender": "Fantasy",
+  "author": "J.R.R. Tolkien",
+  "image": "https://example.com/covers/lotr.jpg",
+  "title": "The Lord of the Rings",
+  "subtitle": "The Fellowship of the Ring",
+  "publisher": "Allen & Unwin",
+  "year": "1954",
+  "pages": 423,
+  "isbn": "978-0-618-00222-1"
+}
+```
+
+```json 400 Bad Request - Duplicate ISBN
+{
+  "timestamp": "2026-03-06T10:30:00.000+00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "A book with ISBN 978-0-618-00222-1 already exists",
+  "path": "/api/v1/books/create"
+}
+```
+
+```json 400 Bad Request - Validation Error
+{
+  "timestamp": "2026-03-06T10:30:00.000+00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "errors": [
+    "title: must not be blank",
+    "isbn: must not be blank"
+  ],
+  "path": "/api/v1/books/create"
+}
+```
+</ResponseExample>
+
+## Status Codes
+
+<ResponseField name="201" type="Created">
+  Book created successfully.
+</ResponseField>
+
+<ResponseField name="400" type="Bad Request">
+  Invalid request body or validation errors (e.g., missing required fields, duplicate ISBN).
+</ResponseField>
+
+<ResponseField name="401" type="Unauthorized">
+  Missing or invalid JWT token.
+</ResponseField>
+
+<ResponseField name="403" type="Forbidden">
+  Valid token but insufficient permissions to create books.
+</ResponseField>

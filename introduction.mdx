@@ -1,0 +1,108 @@
+---
+title: Introduction
+description: Welcome to the JC Java Training - Library Management API documentation
+---
+
+# JC Java Training - Library Management API
+
+A comprehensive Spring Boot REST API for library management with JWT authentication, OpenLibrary integration, and complete book and user management capabilities.
+
+## Overview
+
+This library management system is built with Spring Boot and demonstrates professional Java development practices. It provides a complete REST API for managing books and users, with robust authentication, external API integration, and comprehensive testing.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running in minutes with our step-by-step guide
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/introduction">
+    Explore the complete API documentation
+  </Card>
+  <Card title="Architecture" icon="diagram-project" href="/architecture/overview">
+    Learn about the layered architecture and design patterns
+  </Card>
+  <Card title="Authentication" icon="lock" href="/authentication/overview">
+    Understand JWT-based security implementation
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<AccordionGroup>
+  <Accordion title="JWT Authentication & Authorization" icon="shield-halved">
+    Secure authentication system using JSON Web Tokens with Spring Security. Implements stateless session management and role-based access control.
+  </Accordion>
+  
+  <Accordion title="Complete CRUD Operations" icon="database">
+    Full Create, Read, Update, and Delete operations for both books and users, with advanced filtering, sorting, and pagination support.
+  </Accordion>
+  
+  <Accordion title="OpenLibrary Integration" icon="book-open">
+    Seamless integration with the OpenLibrary API to search for books by ISBN and automatically populate book details.
+  </Accordion>
+  
+  <Accordion title="Layered Architecture" icon="layer-group">
+    Clean separation of concerns with distinct presentation, service, and persistence layers following industry best practices.
+  </Accordion>
+  
+  <Accordion title="Global Exception Handling" icon="triangle-exclamation">
+    Comprehensive error handling with custom exceptions and consistent error responses across all endpoints.
+  </Accordion>
+  
+  <Accordion title="Interactive API Documentation" icon="book">
+    Built-in Swagger/OpenAPI documentation for interactive API exploration and testing.
+  </Accordion>
+</AccordionGroup>
+
+## Technology Stack
+
+- **Framework**: Spring Boot 3.5.3
+- **Language**: Java 21
+- **Database**: PostgreSQL with JPA/Hibernate
+- **Security**: Spring Security with JWT
+- **API Documentation**: Swagger/OpenAPI
+- **Object Mapping**: MapStruct
+- **Build Tool**: Maven
+- **Testing**: JUnit, Spring Test
+
+## What You'll Learn
+
+This project serves as a comprehensive Java training resource, covering:
+
+- Building REST APIs with Spring Boot
+- Implementing JWT authentication and authorization
+- Working with JPA and PostgreSQL databases
+- Integrating external APIs
+- Applying layered architecture patterns
+- Writing unit and integration tests
+- Using MapStruct for DTO mapping
+- Implementing global exception handling
+
+## Getting Started
+
+<Steps>
+  <Step title="Prerequisites">
+    Ensure you have Java 21, Maven, PostgreSQL, and Git installed on your system.
+  </Step>
+  
+  <Step title="Clone & Configure">
+    Clone the repository and configure your database connection in `application.properties`.
+  </Step>
+  
+  <Step title="Run & Test">
+    Start the application and explore the API using Swagger UI at `http://localhost:8081/swagger-ui/index.html`.
+  </Step>
+</Steps>
+
+Ready to dive in? Head over to the [Quick Start Guide](/quickstart) to get your development environment set up.
+
+## Need Help?
+
+<CardGroup cols={2}>
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Detailed setup instructions and configuration
+  </Card>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Understand the codebase organization
+  </Card>
+</CardGroup>

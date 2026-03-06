@@ -1,0 +1,106 @@
+---
+title: "Get Logged In User"
+api: "GET /api/v1/users/logged"
+description: "Retrieves details of the currently authenticated user"
+---
+
+This endpoint returns information about the user associated with the provided JWT token, including their book collection.
+
+## Authentication
+
+This endpoint requires JWT authentication. Include a valid JWT token in the Authorization header. The user information is extracted from the token.
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Response
+
+<ResponseField name="id" type="string">
+  Unique identifier of the user (UUID format)
+</ResponseField>
+
+<ResponseField name="userName" type="string">
+  Username for the user's account
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Full name of the user
+</ResponseField>
+
+<ResponseField name="birthDate" type="string">
+  Date of birth in ISO 8601 format (YYYY-MM-DD)
+</ResponseField>
+
+<ResponseField name="bookIds" type="array">
+  Array of book UUIDs associated with this user
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X GET "https://api.library.com/api/v1/users/logged" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+## Example Response
+
+<ResponseExample>
+```json 200 - Success
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "userName": "jsmith",
+  "name": "John Smith",
+  "birthDate": "1990-05-15",
+  "bookIds": [
+    "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "9f3e4a56-2c1d-4b8e-8f6d-5a3c2b1d4e5f"
+  ]
+}
+```
+
+```json 401 - Unauthorized
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "JWT token is missing or invalid",
+  "path": "/api/v1/users/logged"
+}
+```
+
+```json 404 - User Not Found
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 404,
+  "error": "Not Found",
+  "message": "User not found for the authenticated session",
+  "path": "/api/v1/users/logged"
+}
+```
+
+```json 500 - Internal Server Error
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "An unexpected error occurred",
+  "path": "/api/v1/users/logged"
+}
+```
+</ResponseExample>
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200  | Successfully retrieved logged in user |
+| 401  | Unauthorized - Invalid or missing JWT token |
+| 404  | User not found |
+| 500  | Internal server error |
+
+## Notes
+
+- This endpoint is useful for retrieving the current user's profile information after authentication
+- The user ID is automatically extracted from the JWT token's claims
+- No user ID parameter is needed in the request

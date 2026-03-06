@@ -1,0 +1,118 @@
+---
+title: "Get User by ID"
+api: "GET /api/v1/users/findById/{id}"
+description: "Retrieves a specific user by their unique identifier"
+---
+
+This endpoint returns detailed information about a single user, including their associated book collection.
+
+## Authentication
+
+This endpoint requires JWT authentication. Include a valid JWT token in the Authorization header.
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier (UUID) of the user to retrieve
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string">
+  Unique identifier of the user (UUID format)
+</ResponseField>
+
+<ResponseField name="userName" type="string">
+  Username for the user's account
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Full name of the user
+</ResponseField>
+
+<ResponseField name="birthDate" type="string">
+  Date of birth in ISO 8601 format (YYYY-MM-DD)
+</ResponseField>
+
+<ResponseField name="bookIds" type="array">
+  Array of book UUIDs associated with this user
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X GET "https://api.library.com/api/v1/users/findById/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+## Example Response
+
+<ResponseExample>
+```json 200 - Success
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "userName": "jsmith",
+  "name": "John Smith",
+  "birthDate": "1990-05-15",
+  "bookIds": [
+    "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "9f3e4a56-2c1d-4b8e-8f6d-5a3c2b1d4e5f",
+    "3d8f5b2a-1e4c-6d7f-9a0b-8c7e6d5f4a3b"
+  ]
+}
+```
+
+```json 404 - User Not Found
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 404,
+  "error": "Not Found",
+  "message": "User not found with id: 550e8400-e29b-41d4-a716-446655440000",
+  "path": "/api/v1/users/findById/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+```json 400 - Invalid UUID Format
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Invalid UUID format",
+  "path": "/api/v1/users/findById/invalid-uuid"
+}
+```
+
+```json 401 - Unauthorized
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "JWT token is missing or invalid",
+  "path": "/api/v1/users/findById/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+```json 500 - Internal Server Error
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "An unexpected error occurred",
+  "path": "/api/v1/users/findById/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+</ResponseExample>
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200  | Successfully retrieved user |
+| 400  | Bad request - Invalid UUID format |
+| 401  | Unauthorized - Invalid or missing JWT token |
+| 404  | User not found |
+| 500  | Internal server error |

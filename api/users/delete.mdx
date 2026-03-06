@@ -1,0 +1,97 @@
+---
+title: "Delete User"
+api: "DELETE /api/v1/users/delete/{id}"
+description: "Deletes a user from the system"
+---
+
+This endpoint permanently removes a user and their associations from the library management system.
+
+## Authentication
+
+This endpoint requires JWT authentication. Include a valid JWT token in the Authorization header.
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier (UUID) of the user to delete
+</ParamField>
+
+## Response
+
+This endpoint returns no content on success (HTTP 204).
+
+## Example Request
+
+```bash cURL
+curl -X DELETE "https://api.library.com/api/v1/users/delete/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+## Example Response
+
+<ResponseExample>
+```text 204 - No Content
+(Empty response body)
+```
+
+```json 404 - User Not Found
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 404,
+  "error": "Not Found",
+  "message": "User not found with id: 550e8400-e29b-41d4-a716-446655440000",
+  "path": "/api/v1/users/delete/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+```json 400 - Invalid UUID Format
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Invalid UUID format",
+  "path": "/api/v1/users/delete/invalid-uuid"
+}
+```
+
+```json 401 - Unauthorized
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "JWT token is missing or invalid",
+  "path": "/api/v1/users/delete/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+```json 500 - Internal Server Error
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "An unexpected error occurred",
+  "path": "/api/v1/users/delete/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+</ResponseExample>
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| 204  | Successfully deleted user (no content returned) |
+| 400  | Bad request - Invalid UUID format |
+| 401  | Unauthorized - Invalid or missing JWT token |
+| 404  | User not found |
+| 500  | Internal server error |
+
+## Notes
+
+- This operation is permanent and cannot be undone
+- Deleting a user removes their associations with books but does not delete the books themselves
+- The endpoint returns no content body on successful deletion
+- Consider implementing soft deletion in production environments for data recovery purposes

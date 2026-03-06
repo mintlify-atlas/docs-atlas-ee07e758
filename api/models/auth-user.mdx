@@ -1,0 +1,227 @@
+---
+title: 'Authentication Models'
+description: 'AuthUser entity and authentication-related data transfer objects'
+---
+
+## AuthUser Entity
+
+The AuthUser entity represents an authenticated user in the system, storing credentials and authentication-related information.
+
+### AuthUser Fields
+
+<ResponseField name="id" type="UUID" required>
+  Unique identifier for the authenticated user. Automatically generated using `@PrePersist` if not provided.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The full name of the user.
+</ResponseField>
+
+<ResponseField name="birthDate" type="date">
+  The date of birth of the user in ISO 8601 format (YYYY-MM-DD).
+</ResponseField>
+
+<ResponseField name="username" type="string" required>
+  The username for authentication. Must be unique across the system.
+</ResponseField>
+
+<ResponseField name="password" type="string" required>
+  The hashed password for the user account.
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  The email address of the user. Must be unique and is a required field.
+</ResponseField>
+
+<ResponseField name="createdAt" type="datetime">
+  Timestamp of when the account was created. Automatically set using `@PrePersist` and cannot be updated.
+</ResponseField>
+
+<ResponseField name="isEnabled" type="boolean">
+  Indicates whether the user account is enabled and can authenticate.
+</ResponseField>
+
+<ResponseField name="accountNoExpired" type="boolean">
+  Indicates whether the user account has not expired.
+</ResponseField>
+
+<ResponseField name="accountNoLocked" type="boolean">
+  Indicates whether the user account is not locked.
+</ResponseField>
+
+<ResponseField name="credentialNoExpired" type="boolean">
+  Indicates whether the user's credentials (password) have not expired.
+</ResponseField>
+
+### UUID and Timestamp Generation
+
+The AuthUser entity uses the `@PrePersist` callback to automatically generate a UUID and set the creation timestamp:
+
+```java
+@PrePersist
+public void prePersist(){
+    if (id == null){
+        this.id = UUID.randomUUID();
+    }
+    this.createdAt = LocalDateTime.now();
+}
+```
+
+### Constraints
+
+- **Unique Username**: The `username` field has a unique constraint
+- **Unique Email**: The `email` field is both required and unique
+- **Non-updatable createdAt**: The `createdAt` timestamp cannot be modified after creation
+
+---
+
+## AuthRegisterRequest
+
+Data Transfer Object used for registering a new user account.
+
+### Request Fields
+
+<ResponseField name="name" type="string" required>
+  The full name of the user. Cannot be blank.
+  
+  **Validation**: `@NotBlank(message = "The username is obligatory")`
+</ResponseField>
+
+<ResponseField name="birthDate" type="date" required>
+  The date of birth of the user. Must be a past or present date.
+  
+  **Validation**: 
+  - `@NotNull(message = "The username is obligatory")`
+  - `@PastOrPresent(message = "The date of birth must be a past or present date")`
+</ResponseField>
+
+<ResponseField name="username" type="string" required>
+  The username for the new account. Cannot be blank.
+  
+  **Validation**: `@NotBlank(message = "The username is obligatory")`
+</ResponseField>
+
+<ResponseField name="password" type="string" required>
+  The password for the new account. Cannot be blank.
+  
+  **Validation**: `@NotBlank(message = "The password is obligatory")`
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  The email address of the user. Must be a valid email format.
+  
+  **Validation**: 
+  - `@Email(message = "Must be a valid email address")`
+  - `@NotBlank(message = "Email is required")`
+</ResponseField>
+
+### Example Request
+
+```json
+{
+  "name": "John Doe",
+  "birthDate": "1990-05-15",
+  "username": "johndoe",
+  "password": "SecureP@ssw0rd123",
+  "email": "john.doe@example.com"
+}
+```
+
+---
+
+## AuthRegisterResponse
+
+Data Transfer Object returned after successful user registration.
+
+### Response Fields
+
+<ResponseField name="username" type="string">
+  The username of the newly registered user.
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  The email address of the newly registered user.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  A confirmation message about the registration status.
+</ResponseField>
+
+<ResponseField name="status" type="boolean">
+  Indicates the success of the registration operation.
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "username": "johndoe",
+  "email": "john.doe@example.com",
+  "message": "User registered successfully",
+  "status": true
+}
+```
+
+---
+
+## AuthLoginRequest
+
+Data Transfer Object used for user authentication.
+
+### Request Fields
+
+<ResponseField name="username" type="string" required>
+  The username of the user. Cannot be blank.
+  
+  **Validation**: `@NotBlank(message = "The username is obligatory")`
+</ResponseField>
+
+<ResponseField name="password" type="string" required>
+  The password of the user. Cannot be blank.
+  
+  **Validation**: `@NotBlank(message = "The password is obligatory")`
+</ResponseField>
+
+### Example Request
+
+```json
+{
+  "username": "johndoe",
+  "password": "SecureP@ssw0rd123"
+}
+```
+
+---
+
+## AuthLoginResponse
+
+Data Transfer Object returned after successful user login.
+
+### Response Fields
+
+<ResponseField name="username" type="string">
+  The username of the authenticated user.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  A confirmation message about the login status.
+</ResponseField>
+
+<ResponseField name="status" type="boolean">
+  Indicates the success of the login operation.
+</ResponseField>
+
+<ResponseField name="jwt" type="string">
+  The JWT (JSON Web Token) access token for subsequent authenticated requests. Include this token in the `Authorization` header as `Bearer {jwt}`.
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "username": "johndoe",
+  "message": "Login successful",
+  "status": true,
+  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJqb2huZG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+}
+```

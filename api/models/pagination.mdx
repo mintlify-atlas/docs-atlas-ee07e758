@@ -1,0 +1,144 @@
+---
+title: 'Pagination Models'
+description: 'CustomPageableResponse structure for paginated API responses'
+---
+
+## CustomPageableResponse
+
+The CustomPageableResponse is a generic Data Transfer Object that provides detailed pagination information for list endpoints. It wraps the response data with comprehensive metadata about the current page and the entire dataset.
+
+### Type Parameter
+
+<ResponseField name="T" type="generic">
+  The type of items contained in the page. Can be any response type (e.g., `BookResponse`, `UserResponse`).
+</ResponseField>
+
+### Response Fields
+
+<ResponseField name="page" type="array" required>
+  The list of items on the current page. Each item is of type `T`.
+  
+  <Expandable title="Item structure">
+    The structure depends on the type parameter `T`. For example, if `T` is `BookResponse`, each item will have all BookResponse fields.
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="count" type="integer" required>
+  The number of items on the current page. This may be less than `limit` on the last page.
+</ResponseField>
+
+<ResponseField name="limit" type="integer" required>
+  The maximum number of items per page (page size). This value is typically set in the request parameters.
+</ResponseField>
+
+<ResponseField name="offset" type="integer" required>
+  The starting position (index) of the first item on the current page. Calculated as `(current_page - 1) * limit`.
+</ResponseField>
+
+<ResponseField name="total_pages" type="integer" required>
+  The total number of pages available based on the total count and limit.
+</ResponseField>
+
+<ResponseField name="total_count" type="long" required>
+  The total number of items across all pages in the entire dataset.
+</ResponseField>
+
+<ResponseField name="previous_page" type="integer">
+  The number of the previous page. Will be `null` if the current page is the first page.
+</ResponseField>
+
+<ResponseField name="current_page" type="integer" required>
+  The number of the current page (1-indexed).
+</ResponseField>
+
+<ResponseField name="next_page" type="integer">
+  The number of the next page. Will be `null` if the current page is the last page.
+</ResponseField>
+
+### Pagination Metadata
+
+The response includes several fields to help navigate through paginated results:
+
+- **Navigation**: Use `previous_page` and `next_page` to implement previous/next navigation
+- **Progress**: Calculate progress as `current_page / total_pages`
+- **Range**: The current page shows items from index `offset` to `offset + count - 1`
+- **Completion**: Check if `next_page` is `null` to determine if you've reached the last page
+
+### Example Response (Books)
+
+```json
+{
+  "page": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "gender": "Science Fiction",
+      "author": "Isaac Asimov",
+      "image": "https://example.com/foundation.jpg",
+      "title": "Foundation",
+      "subtitle": "The First Novel in the Foundation Trilogy",
+      "publisher": "Gnome Press",
+      "year": "1951",
+      "pages": 255,
+      "isbn": "978-0-553-29335-0"
+    },
+    {
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "gender": "Fantasy",
+      "author": "J.R.R. Tolkien",
+      "image": "https://example.com/lotr.jpg",
+      "title": "The Lord of the Rings",
+      "subtitle": "The Fellowship of the Ring",
+      "publisher": "Allen & Unwin",
+      "year": "1954",
+      "pages": 423,
+      "isbn": "978-0-618-00222-1"
+    }
+  ],
+  "count": 2,
+  "limit": 10,
+  "offset": 0,
+  "total_pages": 5,
+  "total_count": 47,
+  "previous_page": null,
+  "current_page": 1,
+  "next_page": 2
+}
+```
+
+### Example Response (Users)
+
+```json
+{
+  "page": [
+    {
+      "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "userName": "johndoe",
+      "name": "John Doe",
+      "birthDate": "1990-05-15",
+      "bookIds": [
+        "550e8400-e29b-41d4-a716-446655440000"
+      ]
+    }
+  ],
+  "count": 1,
+  "limit": 10,
+  "offset": 20,
+  "total_pages": 3,
+  "total_count": 25,
+  "previous_page": 2,
+  "current_page": 3,
+  "next_page": null
+}
+```
+
+### Usage in API Endpoints
+
+The CustomPageableResponse is typically used in list endpoints that support pagination:
+
+- `GET /api/v1/books` - Returns `CustomPageableResponse<BookResponse>`
+- `GET /api/v1/users` - Returns `CustomPageableResponse<UserResponse>`
+
+Request parameters typically include:
+- `page`: The page number to retrieve (1-indexed)
+- `size` or `limit`: The number of items per page
+- `sort`: Optional sorting criteria

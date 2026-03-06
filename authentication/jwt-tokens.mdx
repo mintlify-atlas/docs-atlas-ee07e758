@@ -1,0 +1,359 @@
+---
+title: 'JWT Tokens'
+description: 'Understanding JWT token structure, claims, validation, and usage'
+---
+
+## What is a JWT Token?
+
+JSON Web Token (JWT) is a compact, URL-safe means of representing claims to be transferred between two parties. In this API, JWTs are used to securely transmit authentication information between the client and server.
+
+## Token Structure
+
+A JWT consists of three parts separated by dots (.):
+
+```
+header.payload.signature
+```
+
+### Example Token
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJsaWJyYXJ5LWFwaSIsInN1YiI6ImpvaG5kb2UiLCJhdXRob3JpdGllcyI6IiIsImlhdCI6MTcwOTY0MDAwMCwiZXhwIjoxNzA5NjQxODAwLCJqdGkiOiIxMjM0NTY3OC0xMjM0LTEyMzQtMTIzNC0xMjM0NTY3ODkwYWIiLCJuYmYiOjE3MDk2NDAwMDB9.signature
+```
+
+## JWT Claims
+
+The Library Management API includes the following claims in each JWT:
+
+| Claim | Type | Description | Example |
+|-------|------|-------------|----------|
+| `iss` | String | Issuer - identifies who issued the token | Configured via `security.jwt.user.generator` |
+| `sub` | String | Subject - the username of the authenticated user | `"johndoe"` |
+| `authorities` | String | Comma-separated list of user authorities/roles | `""` (empty in current implementation) |
+| `iat` | Number | Issued At - timestamp when token was created | `1709640000` |
+| `exp` | Number | Expiration - timestamp when token expires | `1709641800` |
+| `jti` | String | JWT ID - unique identifier for the token | `"12345678-1234-1234-1234-1234567890ab"` |
+| `nbf` | Number | Not Before - timestamp before which token is invalid | `1709640000` |
+
+<Info>
+  The `exp` (expiration) claim is set to 30 minutes (1800000 milliseconds) from the token creation time.
+</Info>
+
+## Token Generation
+
+Tokens are generated during the login process using the `JwtUtils.createToken()` method:
+
+<CodeGroup>
+```java JwtUtils.java
+public String createToken(Authentication authentication) {
+    Algorithm algorithm = Algorithm.HMAC256(this.privateKey);
+    
+    String username = authentication.getPrincipal().toString();
+    String authorities = authentication.getAuthorities()
+            .stream()
+            .map(grantedAuthority -> grantedAuthority.getAuthority())
+            .collect(Collectors.joining(","));
+    
+    return JWT.create()
+            .withIssuer(this.userGenerator)
+            .withSubject(username)
+            .withClaim("authorities", authorities)
+            .withIssuedAt(new Date())
+            .withExpiresAt(new Date(System.currentTimeMillis() + 1800000))
+            .withJWTId(UUID.randomUUID().toString())
+            .withNotBefore(new Date(System.currentTimeMillis()))
+            .sign(algorithm);
+}
+```
+
+```javascript Client Example
+// After receiving the token from login
+const token = response.data.jwt;
+
+// Store token securely (e.g., localStorage, sessionStorage, or memory)
+localStorage.setItem('authToken', token);
+
+// Use token in subsequent requests
+const config = {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+};
+```
+</CodeGroup>
+
+### Key Generation Details
+
+<Steps>
+  <Step title="Algorithm Selection">
+    Uses HMAC256 (HS256) algorithm with a private key for signing
+  </Step>
+  
+  <Step title="Extract User Information">
+    Retrieves username and authorities from the Authentication object
+  </Step>
+  
+  <Step title="Set Claims">
+    Populates all required claims including issuer, subject, and timestamps
+  </Step>
+  
+  <Step title="Calculate Expiration">
+    Sets expiration to current time + 1,800,000 ms (30 minutes)
+  </Step>
+  
+  <Step title="Generate Unique ID">
+    Creates a UUID for the JWT ID (jti) claim
+  </Step>
+  
+  <Step title="Sign Token">
+    Signs the token using the HMAC256 algorithm with the private key
+  </Step>
+</Steps>
+
+## Token Validation
+
+Every request to a protected endpoint must include a valid JWT token. The validation process is handled by the `JwtTokenValidator` filter:
+
+<CodeGroup>
+```java JwtTokenValidator.java
+@Override
+protected void doFilterInternal(HttpServletRequest request,
+                                HttpServletResponse response,
+                                FilterChain filterChain) throws ServletException, IOException {
+    
+    String jwtToken = request.getHeader(HttpHeaders.AUTHORIZATION);
+    
+    if (jwtToken != null && jwtToken.startsWith("Bearer ")) {
+        jwtToken = jwtToken.substring(7);
+        
+        DecodedJWT decodedJWT = jwtUtils.validationToken(jwtToken);
+        String username = jwtUtils.extractUsername(decodedJWT);
+        
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+            username, null, null);
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+    }
+    
+    filterChain.doFilter(request, response);
+}
+```
+
+```java JwtUtils.validationToken()
+public DecodedJWT validationToken(String token) throws JWTVerificationException {
+    try {
+        Algorithm algorithm = Algorithm.HMAC256(this.privateKey);
+        
+        JWTVerifier verifier = JWT.require(algorithm)
+                .withIssuer(this.userGenerator)
+                .build();
+        
+        return verifier.verify(token);
+    } catch (JWTVerificationException exception) {
+        throw exception;
+    }
+}
+```
+</CodeGroup>
+
+### Validation Checks
+
+The token validation process verifies:
+
+1. **Signature Verification**: Ensures the token hasn't been tampered with
+2. **Issuer Verification**: Confirms the token was issued by this API
+3. **Expiration Check**: Validates the token hasn't expired
+4. **Format Validation**: Ensures the token structure is valid
+
+<Warning>
+  If validation fails, the request continues without authentication context, and Spring Security will return a 401 Unauthorized response for protected endpoints.
+</Warning>
+
+## Using JWT Tokens in Requests
+
+To access protected endpoints, include the JWT token in the `Authorization` header with the `Bearer` prefix:
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.example.com/api/v1/books" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+```javascript JavaScript/Axios
+const axios = require('axios');
+
+const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+
+axios.get('https://api.example.com/api/v1/books', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+})
+.then(response => {
+  console.log(response.data);
+})
+.catch(error => {
+  console.error('Error:', error.response.data);
+});
+```
+
+```python Python/Requests
+import requests
+
+token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+
+headers = {
+    'Authorization': f'Bearer {token}'
+}
+
+response = requests.get(
+    'https://api.example.com/api/v1/books',
+    headers=headers
+)
+
+print(response.json())
+```
+
+```java Java
+HttpClient client = HttpClient.newHttpClient();
+String token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+
+HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("https://api.example.com/api/v1/books"))
+        .header("Authorization", "Bearer " + token)
+        .GET()
+        .build();
+
+HttpResponse<String> response = client.send(request, 
+    HttpResponse.BodyHandlers.ofString());
+
+System.out.println(response.body());
+```
+</CodeGroup>
+
+## Token Extraction Methods
+
+The `JwtUtils` class provides several methods to extract information from decoded tokens:
+
+<CodeGroup>
+```java Extract Username
+public String extractUsername(DecodedJWT decodedJWT) {
+    return decodedJWT.getSubject().toString();
+}
+```
+
+```java Extract Specific Claim
+public Claim getSpecificClaim(DecodedJWT decodedJWT, String claimName) {
+    return decodedJWT.getClaim(claimName);
+}
+
+// Usage example
+Claim authoritiesClaim = jwtUtils.getSpecificClaim(decodedJWT, "authorities");
+String authorities = authoritiesClaim.asString();
+```
+
+```java Extract All Claims
+public Map<String, Claim> extractAllClaims(DecodedJWT decodedJWT) {
+    return decodedJWT.getClaims();
+}
+
+// Usage example
+Map<String, Claim> claims = jwtUtils.extractAllClaims(decodedJWT);
+claims.forEach((key, value) -> {
+    System.out.println(key + ": " + value.toString());
+});
+```
+</CodeGroup>
+
+## Token Expiration and Refresh
+
+### Expiration Time
+
+- **Duration**: 30 minutes (1800000 milliseconds)
+- **Set at**: Token creation time
+- **Calculated as**: `current_time + 1800000`
+
+### Handling Expiration
+
+<Steps>
+  <Step title="Client Detects Expiration">
+    Client receives 401 Unauthorized response or proactively checks token expiration
+  </Step>
+  
+  <Step title="Re-authenticate">
+    Client must call the login endpoint again with user credentials
+  </Step>
+  
+  <Step title="Receive New Token">
+    API returns a new JWT token with updated expiration time
+  </Step>
+  
+  <Step title="Update Stored Token">
+    Client replaces old token with new token in storage
+  </Step>
+</Steps>
+
+<Warning>
+  The API does not currently support token refresh without re-authentication. Users must provide their credentials again to obtain a new token.
+</Warning>
+
+## Configuration Properties
+
+The JWT system uses the following application properties:
+
+| Property | Description | Type |
+|----------|-------------|------|
+| `security.jwt.user.generator` | Issuer identifier for JWT tokens | String |
+| `security.jwt.key.private` | Private key for HMAC256 signing | String |
+
+<Info>
+  These properties should be configured in `application.properties` or `application.yml` and kept secure, especially in production environments.
+</Info>
+
+## Security Best Practices
+
+### For API Developers
+
+- Keep the private key (`security.jwt.key.private`) secret and secure
+- Use environment variables for sensitive configuration
+- Never commit the private key to version control
+- Rotate keys periodically for enhanced security
+
+### For API Consumers
+
+- Store tokens securely (avoid localStorage for sensitive applications)
+- Never expose tokens in URLs or logs
+- Implement token refresh logic before expiration
+- Clear tokens on logout
+- Use HTTPS for all API communication
+
+## Common Token Errors
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| Token signature verification failed | Token was tampered with or signed with different key | Obtain a new token through login |
+| Token expired | Token age exceeds 30 minutes | Re-authenticate to get a new token |
+| Invalid issuer | Token was not issued by this API | Use tokens only from this API |
+| Malformed token | Token format is incorrect | Ensure token is properly formatted |
+| Missing Authorization header | Request doesn't include the token | Add `Authorization: Bearer <token>` header |
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Login Process" icon="right-to-bracket" href="/authentication/login">
+    Learn how to obtain JWT tokens through login
+  </Card>
+  
+  <Card title="Registration" icon="user-plus" href="/authentication/registration">
+    Create a new account to start using the API
+  </Card>
+  
+  <Card title="Authentication Overview" icon="shield-halved" href="/authentication/overview">
+    Understand the complete authentication system
+  </Card>
+  
+  <Card title="API Reference" icon="code" href="/api/auth/register">
+    View detailed authentication endpoint documentation
+  </Card>
+</CardGroup>

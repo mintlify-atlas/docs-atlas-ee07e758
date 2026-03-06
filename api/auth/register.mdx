@@ -1,0 +1,182 @@
+---
+title: 'Register User'
+api: 'POST /api/v1/auth/register'
+description: 'Create a new user account in the system'
+---
+
+This endpoint allows new users to register by providing their personal information including name, birth date, username, password, and email address.
+
+## Request Body
+
+<ParamField body="name" type="string" required>
+  The full name of the user. Cannot be blank.
+</ParamField>
+
+<ParamField body="birthDate" type="string" format="date" required>
+  The date of birth of the user in ISO 8601 format (YYYY-MM-DD). Must be a past or present date.
+  
+  **Example:** `"1990-05-15"`
+</ParamField>
+
+<ParamField body="username" type="string" required>
+  The username for the new account. Cannot be blank. Must be unique in the system.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The password for the new account. Cannot be blank.
+</ParamField>
+
+<ParamField body="email" type="string" format="email" required>
+  The email address of the user. Must be a valid email format and cannot be blank.
+  
+  **Example:** `"user@example.com"`
+</ParamField>
+
+## Response
+
+<ResponseField name="username" type="string">
+  The username of the newly registered user.
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  The email address of the newly registered user.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  A confirmation message about the registration status.
+</ResponseField>
+
+<ResponseField name="status" type="boolean">
+  A boolean indicating the success of the registration operation.
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://api.example.com/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "birthDate": "1990-05-15",
+    "username": "johndoe",
+    "password": "securePassword123",
+    "email": "john.doe@example.com"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.example.com/api/v1/auth/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    name: 'John Doe',
+    birthDate: '1990-05-15',
+    username: 'johndoe',
+    password: 'securePassword123',
+    email: 'john.doe@example.com'
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+```python Python
+import requests
+
+url = 'https://api.example.com/api/v1/auth/register'
+headers = {'Content-Type': 'application/json'}
+payload = {
+    'name': 'John Doe',
+    'birthDate': '1990-05-15',
+    'username': 'johndoe',
+    'password': 'securePassword123',
+    'email': 'john.doe@example.com'
+}
+
+response = requests.post(url, json=payload, headers=headers)
+data = response.json()
+print(data)
+```
+
+```java Java
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URI;
+
+HttpClient client = HttpClient.newHttpClient();
+
+String jsonPayload = """{
+    "name": "John Doe",
+    "birthDate": "1990-05-15",
+    "username": "johndoe",
+    "password": "securePassword123",
+    "email": "john.doe@example.com"
+}""";
+
+HttpRequest request = HttpRequest.newBuilder()
+    .uri(URI.create("https://api.example.com/api/v1/auth/register"))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+    .build();
+
+HttpResponse<String> response = client.send(request, 
+    HttpResponse.BodyHandlers.ofString());
+
+System.out.println(response.body());
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 201 - Success
+{
+  "username": "johndoe",
+  "email": "john.doe@example.com",
+  "message": "User registered successfully",
+  "status": true
+}
+```
+
+```json 400 - Bad Request
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "email",
+      "message": "Must be a valid email address"
+    },
+    {
+      "field": "birthDate",
+      "message": "The date of birth must be a past or present date"
+    }
+  ]
+}
+```
+
+```json 409 - Conflict
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 409,
+  "error": "Conflict",
+  "message": "Username or email already exists"
+}
+```
+
+```json 500 - Internal Server Error
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "An unexpected error occurred during registration"
+}
+```
+
+</ResponseExample>

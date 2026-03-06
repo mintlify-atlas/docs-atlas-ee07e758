@@ -1,0 +1,162 @@
+---
+title: 'Login User'
+api: 'POST /api/v1/auth/login'
+description: 'Authenticate a user and obtain an access token'
+---
+
+This endpoint authenticates a user with their username and password, returning a JWT (JSON Web Token) for subsequent authenticated requests.
+
+## Request Body
+
+<ParamField body="username" type="string" required>
+  The username of the user. Cannot be blank.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The password of the user. Cannot be blank.
+</ParamField>
+
+## Response
+
+<ResponseField name="username" type="string">
+  The username of the authenticated user.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  A confirmation message about the login status.
+</ResponseField>
+
+<ResponseField name="jwt" type="string">
+  The JWT (JSON Web Token) access token for subsequent authenticated requests. This token should be included in the Authorization header as a Bearer token for protected endpoints.
+  
+  **Example:** `"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+</ResponseField>
+
+<ResponseField name="status" type="boolean">
+  A boolean indicating the success of the login operation.
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl -X POST https://api.example.com/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "johndoe",
+    "password": "securePassword123"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.example.com/api/v1/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    username: 'johndoe',
+    password: 'securePassword123'
+  })
+});
+
+const data = await response.json();
+console.log(data);
+
+// Store the JWT for subsequent requests
+const token = data.jwt;
+```
+
+```python Python
+import requests
+
+url = 'https://api.example.com/api/v1/auth/login'
+headers = {'Content-Type': 'application/json'}
+payload = {
+    'username': 'johndoe',
+    'password': 'securePassword123'
+}
+
+response = requests.post(url, json=payload, headers=headers)
+data = response.json()
+print(data)
+
+# Store the JWT for subsequent requests
+token = data['jwt']
+```
+
+```java Java
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URI;
+
+HttpClient client = HttpClient.newHttpClient();
+
+String jsonPayload = """{
+    "username": "johndoe",
+    "password": "securePassword123"
+}""";
+
+HttpRequest request = HttpRequest.newBuilder()
+    .uri(URI.create("https://api.example.com/api/v1/auth/login"))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+    .build();
+
+HttpResponse<String> response = client.send(request, 
+    HttpResponse.BodyHandlers.ofString());
+
+System.out.println(response.body());
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 201 - Success
+{
+  "username": "johndoe",
+  "message": "Login successful",
+  "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJqb2huZG9lIiwiaWF0IjoxNzA5NzI0OTMwLCJleHAiOjE3MDk4MTEzMzB9.1x2y3z4a5b6c7d8e9f0g1h2i3j4k5l6m7n8o9p0q1r2",
+  "status": true
+}
+```
+
+```json 400 - Bad Request
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "username",
+      "message": "The username is obligatory"
+    },
+    {
+      "field": "password",
+      "message": "The password is obligatory"
+    }
+  ]
+}
+```
+
+```json 401 - Unauthorized
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "Invalid username or password"
+}
+```
+
+```json 500 - Internal Server Error
+{
+  "timestamp": "2026-03-06T10:15:30.123Z",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "An unexpected error occurred during login"
+}
+```
+
+</ResponseExample>

@@ -1,0 +1,355 @@
+---
+title: 'Swagger UI'
+description: 'Interactive API documentation and testing with Swagger'
+icon: 'flask'
+---
+
+## What is Swagger UI?
+
+Swagger UI provides an interactive interface for exploring and testing the Library Management API. It automatically generates documentation from the API's OpenAPI specification and allows you to execute requests directly from your browser.
+
+<Info>
+  Swagger UI is available at: `http://localhost:8081/swagger-ui/index.html`
+</Info>
+
+## Accessing Swagger UI
+
+### Prerequisites
+
+1. Ensure the application is running on port **8081**
+2. Open your web browser
+3. Navigate to the Swagger UI endpoint
+
+### URL Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Swagger UI Interface" icon="browser">
+    ```
+    http://localhost:8081/swagger-ui/index.html
+    ```
+    Interactive API documentation
+  </Card>
+  <Card title="OpenAPI Specification" icon="file-code">
+    ```
+    http://localhost:8081/v3/api-docs
+    ```
+    Raw OpenAPI JSON specification
+  </Card>
+</CardGroup>
+
+<Note>
+  Swagger UI endpoints are **publicly accessible** and do not require authentication.
+</Note>
+
+## Swagger Configuration
+
+The API uses **OpenAPI 3.0** specification with the following configuration:
+
+### API Information
+
+| Property | Value |
+|----------|-------|
+| **Title** | TRAINING APP |
+| **Description** | Application for books |
+| **Version** | 1.0.0 |
+| **Contact** | Juan Esteban Camacho Barrera |
+| **Email** | jecb1913@gmail.com |
+
+### Available Servers
+
+Swagger UI allows you to switch between different server environments:
+
+<CardGroup cols={2}>
+  <Card title="DEV SERVER" icon="laptop-code">
+    ```
+    http://localhost:8081
+    ```
+    Development environment
+  </Card>
+  <Card title="PROD SERVER" icon="server">
+    ```
+    http://books:8081
+    ```
+    Production environment
+  </Card>
+</CardGroup>
+
+## Using Swagger UI
+
+### 1. Explore Available Endpoints
+
+When you open Swagger UI, you'll see all available API endpoints organized by categories:
+
+- **auth-user-controller**: Authentication endpoints (login, register)
+- **book-controller**: Book management endpoints
+- **user-controller**: User management endpoints
+
+Each endpoint shows:
+- HTTP method (GET, POST, PUT, DELETE)
+- Endpoint path
+- Brief description
+- Required authentication
+
+### 2. Authentication with JWT
+
+Most endpoints require JWT authentication. Here's how to authenticate in Swagger UI:
+
+#### Step 1: Register or Login
+
+1. Expand the **auth-user-controller** section
+2. Click on `POST /api/v1/auth/login` or `POST /api/v1/auth/register`
+3. Click **"Try it out"**
+4. Enter your credentials in the request body:
+
+```json
+{
+  "username": "your-username",
+  "password": "your-password"
+}
+```
+
+5. Click **"Execute"**
+6. Copy the JWT token from the response
+
+#### Step 2: Authorize Swagger UI
+
+1. Click the **"Authorize"** button (lock icon) at the top of the page
+2. In the "Security token" dialog, enter:
+   ```
+   Bearer <your-jwt-token>
+   ```
+3. Click **"Authorize"**
+4. Click **"Close"**
+
+<Info>
+  **Token Format**: Make sure to include "Bearer " (with a space) before your token.
+  
+  Example: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+</Info>
+
+<Note>
+  Once authorized, all subsequent requests will automatically include the JWT token in the Authorization header.
+</Note>
+
+### 3. Testing Endpoints
+
+After authentication, you can test any endpoint:
+
+#### Making a Request
+
+1. **Expand an endpoint** by clicking on it
+2. Click **"Try it out"** button
+3. **Fill in parameters**:
+   - Path parameters (e.g., `id`)
+   - Query parameters (e.g., `page`, `size`)
+   - Request body (for POST/PUT requests)
+4. Click **"Execute"**
+5. View the response below
+
+#### Response Information
+
+Swagger UI displays comprehensive response information:
+
+- **Response code**: HTTP status (200, 201, 404, etc.)
+- **Response body**: JSON response data
+- **Response headers**: HTTP headers returned
+- **Request duration**: Time taken to execute
+
+### 4. Understanding Request/Response Schemas
+
+Each endpoint shows detailed schema information:
+
+- **Request Body Schema**: Expected JSON structure for POST/PUT requests
+- **Response Schema**: Structure of successful responses
+- **Required Fields**: Fields marked as required with an asterisk (*)
+- **Data Types**: Type information for each field (string, integer, UUID, etc.)
+
+## Swagger UI Features
+
+### Endpoint Categories
+
+The API is organized into three main controllers:
+
+<CardGroup cols={3}>
+  <Card title="Authentication" icon="lock">
+    **auth-user-controller**
+    
+    - User registration
+    - User login
+    - JWT token generation
+  </Card>
+  <Card title="Books" icon="book">
+    **book-controller**
+    
+    - List all books (paginated)
+    - Find book by ID
+    - Search by ISBN
+    - Create/Update/Delete books
+  </Card>
+  <Card title="Users" icon="users">
+    **user-controller**
+    
+    - List all users (paginated)
+    - Find user by ID
+    - Update/Delete users
+    - Manage book collections
+    - Get current user
+  </Card>
+</CardGroup>
+
+### HTTP Methods
+
+Swagger UI color-codes HTTP methods for easy identification:
+
+| Method | Color | Common Use Cases |
+|--------|-------|------------------|
+| **GET** | Blue | Retrieve resources, list items |
+| **POST** | Green | Create resources, login, add to collection |
+| **PUT** | Orange | Update existing resources |
+| **DELETE** | Red | Remove resources |
+
+### Models/Schemas
+
+At the bottom of Swagger UI, you'll find the **Schemas** section showing all data models:
+
+- **AuthLoginRequest**: Login credentials
+- **AuthLoginResponse**: Login response with JWT token
+- **AuthRegisterRequest**: Registration data
+- **BookRequest**: Book creation/update data
+- **BookResponse**: Book resource representation
+- **UserRequest**: User creation/update data
+- **UserResponse**: User resource representation
+- **CustomPageableResponse**: Pagination wrapper
+
+## Common Use Cases
+
+### Example 1: Register and Login
+
+1. Navigate to `POST /api/v1/auth/register`
+2. Try it out with:
+   ```json
+   {
+     "username": "testuser",
+     "password": "SecurePass123",
+     "email": "test@example.com",
+     "firstName": "Test",
+     "lastName": "User"
+   }
+   ```
+3. Execute and receive your JWT token
+4. Use the token to authorize (see Authentication section above)
+
+### Example 2: List All Books
+
+1. Ensure you're authenticated (see Authentication section)
+2. Navigate to `GET /api/v1/books/findAll`
+3. Try it out
+4. Optionally set parameters:
+   - `page`: 0 (first page)
+   - `size`: 10 (items per page)
+   - `title`: filter by book title
+   - `author`: filter by author
+   - `gender`: filter by genre
+5. Execute to see paginated results
+
+### Example 3: Create a New Book
+
+1. Ensure you're authenticated
+2. Navigate to `POST /api/v1/books/create`
+3. Try it out with:
+   ```json
+   {
+     "title": "Sample Book",
+     "author": "John Doe",
+     "isbn": "978-3-16-148410-0",
+     "gender": "Fiction",
+     "publisher": "Sample Publisher",
+     "publicationYear": 2024
+   }
+   ```
+4. Execute and receive the created book with its UUID
+
+### Example 4: Add Book to User Collection
+
+1. Ensure you're authenticated
+2. Get your user ID from `GET /api/v1/users/logged`
+3. Get a book ID from `GET /api/v1/books/findAll`
+4. Navigate to `POST /api/v1/users/{userId}/books/{bookId}`
+5. Enter both UUIDs in the path parameters
+6. Execute to add the book to your collection
+
+## Security Features
+
+### JWT Token Authentication
+
+Swagger UI is configured with **HTTP Bearer authentication**:
+
+- **Scheme Type**: HTTP
+- **Security Scheme**: Bearer
+- **Token Format**: JWT (JSON Web Token)
+- **Header**: Authorization
+- **Location**: Header
+
+<Info>
+  The API uses **JWT tokens** for stateless authentication. Tokens are validated on every request to protected endpoints.
+</Info>
+
+### Token Expiration
+
+If your token expires during testing:
+
+1. Login again to get a new token
+2. Re-authorize Swagger UI with the new token
+3. Continue testing
+
+## Tips and Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Save Your Token" icon="floppy-disk">
+    Keep your JWT token in a safe place during testing sessions. You'll need it to authorize Swagger UI.
+  </Card>
+  <Card title="Test in Order" icon="list-ol">
+    Start with authentication endpoints, then test create operations before read operations.
+  </Card>
+  <Card title="Check Schemas" icon="diagram-project">
+    Review the schema section to understand required fields and data types before making requests.
+  </Card>
+  <Card title="Use Filters" icon="filter">
+    Take advantage of query parameters like `title`, `author`, and `gender` to filter results.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| **401 Unauthorized** | Ensure you've authorized with a valid JWT token |
+| **404 Not Found** | Verify the resource exists and you're using the correct UUID |
+| **400 Bad Request** | Check that all required fields are provided with correct data types |
+| **Token expired** | Login again to get a fresh JWT token |
+| **Swagger UI not loading** | Verify the application is running on port 8081 |
+
+### Getting Help
+
+If you encounter issues:
+
+1. Check the response body for detailed error messages
+2. Verify your request matches the schema requirements
+3. Ensure all required fields are provided
+4. Check that UUIDs are in the correct format
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Authentication" icon="lock" href="/api/auth">
+    Learn about authentication endpoints
+  </Card>
+  <Card title="Books API" icon="book" href="/api/books">
+    Explore book management endpoints
+  </Card>
+  <Card title="Users API" icon="users" href="/api/users">
+    Discover user management features
+  </Card>
+</CardGroup>
